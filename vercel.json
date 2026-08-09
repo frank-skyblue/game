@@ -1,6 +1,7 @@
 {
   "installCommand": "npm install",
   "buildCommand": "npm run build -w @pvp-arena/client",
+  "devCommand": "npm run build -w shared && npm run -w @pvp-arena/client dev -- --port $PORT",
   "outputDirectory": "client/dist",
   "framework": null,
   "rewrites": [
