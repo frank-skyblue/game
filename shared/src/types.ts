@@ -36,10 +36,20 @@ export type BulletSnapshot = {
   color: number;
 };
 
+export type PickupKind = "health" | "ammo";
+
+export type PickupSnapshot = {
+  id: string;
+  kind: PickupKind;
+  x: number;
+  y: number;
+};
+
 export type GameState = {
   roomCode: string;
   players: PlayerSnapshot[];
   bullets: BulletSnapshot[];
+  pickups: PickupSnapshot[];
   serverTime: number;
 };
 

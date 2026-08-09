@@ -179,6 +179,7 @@ export const joinGuestRoom = async (
     roomCode: code,
     players: [],
     bullets: [],
+    pickups: [],
     serverTime: 0,
   };
   let arena: ArenaDefinition = cloneArena(DEFAULT_ARENA);

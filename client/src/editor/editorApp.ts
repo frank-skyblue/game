@@ -169,34 +169,37 @@ export const mountEditor = (root: HTMLElement) => {
   };
 
   const draw = () => {
-    ctx.fillStyle = "#111827";
+    ctx.fillStyle = "#070d1a";
     ctx.fillRect(0, 0, arena.width, arena.height);
 
-    ctx.strokeStyle = "rgba(31, 41, 55, 0.7)";
     ctx.lineWidth = 1;
     for (let x = 0; x < arena.width; x += 40) {
+      const accent = x % 160 === 0;
+      ctx.strokeStyle = accent ? "rgba(29, 78, 216, 0.45)" : "rgba(19, 32, 51, 0.7)";
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, arena.height);
       ctx.stroke();
     }
     for (let y = 0; y < arena.height; y += 40) {
+      const accent = y % 160 === 0;
+      ctx.strokeStyle = accent ? "rgba(14, 165, 233, 0.4)" : "rgba(19, 32, 51, 0.7)";
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(arena.width, y);
       ctx.stroke();
     }
 
-    ctx.strokeStyle = "#334155";
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
     ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, arena.width - 2, arena.height - 2);
+    ctx.strokeRect(2, 2, arena.width - 4, arena.height - 4);
 
     const wallsToDraw = draftWall ? [...arena.walls, draftWall] : arena.walls;
     wallsToDraw.forEach((wall, index) => {
       const selected = index === selectedWall && !draftWall;
-      ctx.fillStyle = selected ? "#64748b" : "#475569";
+      ctx.fillStyle = selected ? "#334155" : "#1e293b";
       ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
-      ctx.strokeStyle = selected ? "#e2e8f0" : "#94a3b8";
+      ctx.strokeStyle = selected ? "#e0f2fe" : "#38bdf8";
       ctx.lineWidth = selected ? 3 : 2;
       ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
     });

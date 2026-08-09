@@ -27,20 +27,38 @@ const SPAWN_CLEARANCE = 16;
 
 /** Classic built-in arena used when no custom map is selected. */
 export const DEFAULT_ARENA: ArenaDefinition = {
-  width: 960,
-  height: 640,
+  width: 1440,
+  height: 960,
   walls: [
-    { x: 280, y: 180, width: 120, height: 28 },
-    { x: 560, y: 180, width: 120, height: 28 },
-    { x: 280, y: 432, width: 120, height: 28 },
-    { x: 560, y: 432, width: 120, height: 28 },
-    { x: 440, y: 280, width: 80, height: 80 },
+    // Four pads
+    { x: 360, y: 240, width: 160, height: 28 },
+    { x: 920, y: 240, width: 160, height: 28 },
+    { x: 360, y: 692, width: 160, height: 28 },
+    { x: 920, y: 692, width: 160, height: 28 },
+    // Center keep
+    { x: 640, y: 400, width: 160, height: 160 },
+    // Mid bridges / side cover
+    { x: 560, y: 280, width: 40, height: 100 },
+    { x: 840, y: 580, width: 40, height: 100 },
+    { x: 200, y: 440, width: 120, height: 28 },
+    { x: 1120, y: 492, width: 120, height: 28 },
+    // Corner pockets
+    { x: 80, y: 80, width: 100, height: 28 },
+    { x: 80, y: 80, width: 28, height: 100 },
+    { x: 1260, y: 80, width: 100, height: 28 },
+    { x: 1332, y: 80, width: 28, height: 100 },
+    { x: 80, y: 852, width: 100, height: 28 },
+    { x: 80, y: 780, width: 28, height: 100 },
+    { x: 1260, y: 852, width: 100, height: 28 },
+    { x: 1332, y: 780, width: 28, height: 100 },
   ],
   spawnPoints: [
-    { x: 120, y: 120 },
-    { x: 840, y: 120 },
-    { x: 120, y: 520 },
-    { x: 840, y: 520 },
+    { x: 160, y: 160 },
+    { x: 1280, y: 160 },
+    { x: 160, y: 800 },
+    { x: 1280, y: 800 },
+    { x: 720, y: 120 },
+    { x: 720, y: 840 },
   ],
 };
 

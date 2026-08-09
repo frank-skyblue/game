@@ -11,6 +11,15 @@ export const ARENA_HEIGHT = DEFAULT_ARENA.height;
 export const PLAYER_RADIUS = 16;
 export const RESPAWN_MS = 2500;
 
+export const PICKUP_RADIUS = 14;
+export const MAX_PICKUPS = 5;
+export const INITIAL_PICKUP_COUNT = 3;
+export const PICKUP_SPAWN_INTERVAL_MS = 7000;
+/** Health restored by a health pack (capped at weapon maxHealth). */
+export const HEALTH_PACK_HEAL = 40;
+/** Magazines worth of ammo added to reserve by an ammo pack. */
+export const AMMO_PACK_MAGAZINES = 1;
+
 export const MAX_PLAYERS = 8;
 export const DEFAULT_BOT_COUNT = 2;
 

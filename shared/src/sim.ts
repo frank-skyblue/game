@@ -1,5 +1,11 @@
 import {
+  AMMO_PACK_MAGAZINES,
   EMPTY_INPUT,
+  HEALTH_PACK_HEAL,
+  INITIAL_PICKUP_COUNT,
+  MAX_PICKUPS,
+  PICKUP_RADIUS,
+  PICKUP_SPAWN_INTERVAL_MS,
   PLAYER_COLORS,
   PLAYER_RADIUS,
   RESPAWN_MS,
@@ -18,7 +24,13 @@ import {
   pickBotName,
   type BotPersonalityId,
 } from "./bots";
-import type { BulletSnapshot, GameState, PlayerSnapshot } from "./types";
+import type {
+  BulletSnapshot,
+  GameState,
+  PickupKind,
+  PickupSnapshot,
+  PlayerSnapshot,
+} from "./types";
 import {
   getWeapon,
   parseWeaponId,
@@ -59,14 +71,21 @@ export class ArenaSim {
   private swingHits = new Map<string, Set<string>>();
   private wasShooting = new Map<string, boolean>();
   private bullets: InternalBullet[] = [];
+  private pickups = new Map<string, PickupSnapshot>();
   private nextBulletId = 1;
   private nextBotId = 1;
+  private nextPickupId = 1;
+  private nextPickupSpawnAt = 0;
   private colorIndex = 0;
   private serverTime = 0;
 
   constructor(roomCode: string, arena: ArenaDefinition = DEFAULT_ARENA) {
     this.roomCode = roomCode;
     this.arena = cloneArena(arena);
+    for (let i = 0; i < INITIAL_PICKUP_COUNT; i += 1) {
+      this.spawnPickup();
+    }
+    this.nextPickupSpawnAt = Date.now() + PICKUP_SPAWN_INTERVAL_MS;
   }
 
   getPlayerCount(): number {
@@ -164,6 +183,7 @@ export class ArenaSim {
       this.updatePlayer(player, id, dt, now);
     }
     this.updateBullets(dt, now);
+    this.updatePickups(now);
   }
 
   private updateBotInputs(now: number) {
@@ -188,6 +208,7 @@ export class ArenaSim {
       roomCode: this.roomCode,
       players: [...this.players.values()].map((player) => ({ ...player })),
       bullets: this.bullets.map(({ expiresAt: _expiresAt, ...bullet }) => ({ ...bullet })),
+      pickups: [...this.pickups.values()].map((pickup) => ({ ...pickup })),
       serverTime: this.serverTime,
     };
   }
@@ -415,6 +436,96 @@ export class ArenaSim {
     }
 
     this.bullets = remaining;
+  }
+
+  private updatePickups(now: number) {
+    if (this.pickups.size < MAX_PICKUPS && now >= this.nextPickupSpawnAt) {
+      this.spawnPickup();
+      this.nextPickupSpawnAt = now + PICKUP_SPAWN_INTERVAL_MS;
+    }
+
+    for (const [id, pickup] of this.pickups) {
+      for (const player of this.players.values()) {
+        if (!player.alive) {
+          continue;
+        }
+        if (
+          !circlesOverlap(
+            pickup.x,
+            pickup.y,
+            PICKUP_RADIUS,
+            player.x,
+            player.y,
+            PLAYER_RADIUS
+          )
+        ) {
+          continue;
+        }
+        if (this.tryCollectPickup(player, pickup)) {
+          this.pickups.delete(id);
+          break;
+        }
+      }
+    }
+  }
+
+  private spawnPickup(kind?: PickupKind) {
+    if (this.pickups.size >= MAX_PICKUPS) {
+      return;
+    }
+
+    const occupied = [
+      ...[...this.players.values()].map((player) => ({
+        x: player.x,
+        y: player.y,
+        radius: PLAYER_RADIUS,
+      })),
+      ...[...this.pickups.values()].map((pickup) => ({
+        x: pickup.x,
+        y: pickup.y,
+        radius: PICKUP_RADIUS * 2,
+      })),
+    ];
+    const pos = findRandomFreeSpawn(occupied, PICKUP_RADIUS, 64, this.arena);
+    const pickupKind: PickupKind =
+      kind ?? (Math.random() < 0.5 ? "health" : "ammo");
+    const id = `pickup-${this.nextPickupId}`;
+    this.nextPickupId += 1;
+    this.pickups.set(id, {
+      id,
+      kind: pickupKind,
+      x: pos.x,
+      y: pos.y,
+    });
+  }
+
+  private tryCollectPickup(
+    player: PlayerSnapshot,
+    pickup: PickupSnapshot
+  ): boolean {
+    const weapon = getWeapon(player.weapon);
+
+    if (pickup.kind === "health") {
+      if (player.health >= weapon.maxHealth) {
+        return false;
+      }
+      player.health = Math.min(
+        weapon.maxHealth,
+        player.health + HEALTH_PACK_HEAL
+      );
+      return true;
+    }
+
+    if (weapon.infiniteAmmo || player.reserveAmmo >= weapon.reserveAmmo) {
+      return false;
+    }
+
+    const grant = weapon.magazineSize * AMMO_PACK_MAGAZINES;
+    player.reserveAmmo = Math.min(
+      weapon.reserveAmmo,
+      player.reserveAmmo + grant
+    );
+    return true;
   }
 
   private applyDamage(

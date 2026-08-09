@@ -6,14 +6,16 @@
     <title>PvP Arena</title>
     <style>
       :root {
-        --bg: #0b1220;
-        --panel: #111827;
-        --line: #334155;
-        --text: #f8fafc;
+        --bg: #060b16;
+        --panel: #0c1528;
+        --line: #1e3a5f;
+        --text: #f1f5f9;
         --muted: #94a3b8;
-        --accent: #1d4ed8;
-        --accent-hover: #2563eb;
+        --accent: #0284c7;
+        --accent-hover: #0ea5e9;
+        --accent-glow: rgba(56, 189, 248, 0.35);
         --warn: #fbbf24;
+        --cyan: #67e8f9;
       }
 
       * {
@@ -26,11 +28,31 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background:
-          radial-gradient(ellipse at top, #1e293b 0%, transparent 55%),
-          linear-gradient(180deg, #0b1220 0%, #020617 100%);
+        background: var(--bg);
         color: var(--text);
         font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -20%;
+        z-index: -1;
+        background:
+          radial-gradient(ellipse 50% 40% at 20% 15%, rgba(14, 165, 233, 0.22), transparent 55%),
+          radial-gradient(ellipse 45% 35% at 85% 70%, rgba(56, 189, 248, 0.12), transparent 50%),
+          radial-gradient(ellipse 60% 50% at 50% 100%, rgba(30, 58, 95, 0.45), transparent 60%),
+          linear-gradient(180deg, #0a1224 0%, #060b16 45%, #020617 100%);
+        animation: lobby-drift 18s ease-in-out infinite alternate;
+      }
+
+      @keyframes lobby-drift {
+        from {
+          transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+        }
+        to {
+          transform: translate3d(1.5%, 1.5%, 0) scale(1.06);
+        }
       }
 
       #lobby {
@@ -47,24 +69,33 @@
       .panel {
         width: min(520px, 100%);
         padding: 36px 32px 28px;
-        background: color-mix(in srgb, var(--panel) 92%, transparent);
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        background: color-mix(in srgb, var(--panel) 88%, transparent);
+        border: 1px solid color-mix(in srgb, var(--cyan) 35%, var(--line));
+        border-radius: 14px;
+        box-shadow:
+          0 0 0 1px rgba(14, 165, 233, 0.08),
+          0 24px 60px rgba(0, 0, 0, 0.45),
+          0 0 48px var(--accent-glow);
+        backdrop-filter: blur(10px);
       }
 
       h1 {
         margin: 0;
         font-family: Georgia, "Times New Roman", serif;
-        font-size: clamp(2.4rem, 6vw, 3.2rem);
-        letter-spacing: 0.04em;
+        font-size: clamp(2.6rem, 6.5vw, 3.4rem);
+        letter-spacing: 0.06em;
         font-weight: 700;
+        background: linear-gradient(120deg, #f8fafc 10%, #67e8f9 55%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 0 18px rgba(56, 189, 248, 0.35));
       }
 
       .tagline {
         margin: 10px 0 28px;
         color: var(--muted);
-        line-height: 1.4;
+        line-height: 1.45;
       }
 
       label {
@@ -83,15 +114,17 @@
         padding: 12px 14px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #0f172a;
+        background: #07101f;
         color: var(--text);
         font: inherit;
         font-size: 1rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
 
       input:focus {
-        outline: 2px solid #3b82f6;
-        outline-offset: 1px;
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
       }
 
       #roomCode {
@@ -111,31 +144,35 @@
         border: 0;
         border-radius: 8px;
         padding: 12px 14px;
-        background: var(--accent);
+        background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
         color: var(--text);
         font: inherit;
         font-size: 1rem;
         cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
       }
 
       button:hover,
       button:focus-visible {
-        background: var(--accent-hover);
+        background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
+        box-shadow: 0 0 20px var(--accent-glow);
+        transform: translateY(-1px);
       }
 
       button:focus-visible {
-        outline: 2px solid #93c5fd;
+        outline: 2px solid #67e8f9;
         outline-offset: 2px;
       }
 
       button.secondary {
-        background: #1e293b;
+        background: #122033;
         border: 1px solid var(--line);
       }
 
       button.secondary:hover,
       button.secondary:focus-visible {
-        background: #334155;
+        background: #1a2f4a;
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.18);
       }
 
       .weapon-grid {
@@ -153,21 +190,25 @@
         padding: 12px 14px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #0f172a;
+        background: #07101f;
         color: var(--text);
         text-align: left;
         cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
       }
 
       .weapon-option:hover,
       .weapon-option:focus-visible {
-        background: #1e293b;
+        background: #0f1c30;
+        border-color: #38bdf8;
       }
 
       .weapon-option[aria-pressed="true"] {
-        border-color: #3b82f6;
-        background: #172554;
-        box-shadow: inset 0 0 0 1px #3b82f6;
+        border-color: #38bdf8;
+        background: #0b2740;
+        box-shadow:
+          inset 0 0 0 1px rgba(103, 232, 249, 0.35),
+          0 0 18px rgba(56, 189, 248, 0.28);
       }
 
       .weapon-option .weapon-name {
@@ -226,7 +267,7 @@
       }
 
       .editor-back {
-        color: #93c5fd;
+        color: #7dd3fc;
         text-decoration: none;
         font-size: 0.95rem;
       }
@@ -295,8 +336,9 @@
       }
 
       .tool-btn[aria-pressed="true"] {
-        background: #172554;
-        border-color: #3b82f6;
+        background: #0b2740;
+        border-color: #38bdf8;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
       }
 
       .editor-meta {
@@ -340,13 +382,14 @@
       }
 
       .lobby-links a {
-        color: #93c5fd;
+        color: #7dd3fc;
         text-decoration: none;
       }
 
       .lobby-links a:hover,
       .lobby-links a:focus-visible {
         text-decoration: underline;
+        text-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
       }
 
       @media (max-width: 860px) {
@@ -369,7 +412,7 @@
     <div id="lobby">
       <div class="panel">
         <h1>PVP ARENA</h1>
-        <p class="tagline">Top-down deathmatch. Create a room, share the code, and keep the host tab open.</p>
+        <p class="tagline">Neon spirit deathmatch. Create a room, share the code, and keep the host tab open.</p>
 
         <div class="field">
           <label for="playerName">Name</label>
