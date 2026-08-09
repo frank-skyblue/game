@@ -12,7 +12,12 @@ import {
   findRandomFreeSpawn,
 } from "./collision";
 import { cloneArena, DEFAULT_ARENA, type ArenaDefinition } from "./arena";
-import { computeBotInput } from "./bots";
+import {
+  computeBotInput,
+  personalityForWeapon,
+  pickBotName,
+  type BotPersonalityId,
+} from "./bots";
 import type { BulletSnapshot, GameState, PlayerSnapshot } from "./types";
 import {
   getWeapon,
@@ -49,6 +54,7 @@ export class ArenaSim {
   private players = new Map<string, PlayerSnapshot>();
   private inputs = new Map<string, PlayerInput>();
   private botIds = new Set<string>();
+  private botPersonalities = new Map<string, BotPersonalityId>();
   private lastShotAt = new Map<string, number>();
   private swingHits = new Map<string, Set<string>>();
   private wasShooting = new Map<string, boolean>();
@@ -107,11 +113,19 @@ export class ArenaSim {
 
   addBot(name?: string, weaponId?: WeaponId | string): PlayerSnapshot {
     const id = `bot-${this.nextBotId}`;
-    const label = name?.trim() || `Bot ${this.nextBotId}`;
-    const weapon =
-      weaponId ?? WEAPON_IDS[Math.floor(Math.random() * WEAPON_IDS.length)];
     this.nextBotId += 1;
+
+    const weapon = parseWeaponId(
+      weaponId ?? WEAPON_IDS[Math.floor(Math.random() * WEAPON_IDS.length)]
+    );
+    const personality = personalityForWeapon(weapon);
+    const usedNames = new Set(
+      [...this.players.values()].map((player) => player.name)
+    );
+    const label = name?.trim() || pickBotName(personality, usedNames);
+
     this.botIds.add(id);
+    this.botPersonalities.set(id, personality);
     return this.addPlayer(id, label, weapon, { freeSpawn: true });
   }
 
@@ -119,6 +133,7 @@ export class ArenaSim {
     this.players.delete(id);
     this.inputs.delete(id);
     this.botIds.delete(id);
+    this.botPersonalities.delete(id);
     this.lastShotAt.delete(id);
     this.swingHits.delete(id);
     this.wasShooting.delete(id);
@@ -162,7 +177,9 @@ export class ArenaSim {
       if (!bot) {
         continue;
       }
-      this.setInput(botId, computeBotInput(bot, snapshots, now));
+      const personality =
+        this.botPersonalities.get(botId) ?? personalityForWeapon(bot.weapon);
+      this.setInput(botId, computeBotInput(bot, snapshots, now, personality));
     }
   }
 
@@ -339,14 +356,17 @@ export class ArenaSim {
       const dx = target.x - player.x;
       const dy = target.y - player.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > weapon.meleeRange + PLAYER_RADIUS || dist < 0.001) {
+      if (dist > weapon.meleeRange + PLAYER_RADIUS) {
         continue;
       }
 
-      const toTarget = Math.atan2(dy, dx);
-      // Allow a little angular slack so tick rate doesn't miss the slice.
-      if (angleDelta(toTarget, bladeAngle) > 0.35) {
-        continue;
+      // Stacked / point-blank: always connect (atan2 is undefined at dist≈0).
+      if (dist >= PLAYER_RADIUS * 0.75) {
+        const toTarget = Math.atan2(dy, dx);
+        // Allow a little angular slack so tick rate doesn't miss the slice.
+        if (angleDelta(toTarget, bladeAngle) > 0.35) {
+          continue;
+        }
       }
 
       hitSet.add(target.id);
