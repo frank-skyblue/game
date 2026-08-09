@@ -27,25 +27,34 @@ export const circleHitsAnyWall = (
 ): boolean => WALLS.some((wall) => circleHitsWall(x, y, radius, wall));
 
 export const clampPlayerPosition = (
-  x: number,
-  y: number
+  currentX: number,
+  currentY: number,
+  desiredX: number,
+  desiredY: number
 ): { x: number; y: number } => {
-  const nextX = Math.max(PLAYER_RADIUS, Math.min(ARENA_WIDTH - PLAYER_RADIUS, x));
-  const nextY = Math.max(PLAYER_RADIUS, Math.min(ARENA_HEIGHT - PLAYER_RADIUS, y));
+  const nextX = Math.max(
+    PLAYER_RADIUS,
+    Math.min(ARENA_WIDTH - PLAYER_RADIUS, desiredX)
+  );
+  const nextY = Math.max(
+    PLAYER_RADIUS,
+    Math.min(ARENA_HEIGHT - PLAYER_RADIUS, desiredY)
+  );
 
   if (!circleHitsAnyWall(nextX, nextY, PLAYER_RADIUS)) {
     return { x: nextX, y: nextY };
   }
 
-  if (!circleHitsAnyWall(nextX, y, PLAYER_RADIUS)) {
-    return { x: nextX, y };
+  // Slide along walls by resolving one axis at a time from the current pose.
+  if (!circleHitsAnyWall(nextX, currentY, PLAYER_RADIUS)) {
+    return { x: nextX, y: currentY };
   }
 
-  if (!circleHitsAnyWall(x, nextY, PLAYER_RADIUS)) {
-    return { x, y: nextY };
+  if (!circleHitsAnyWall(currentX, nextY, PLAYER_RADIUS)) {
+    return { x: currentX, y: nextY };
   }
 
-  return { x, y };
+  return { x: currentX, y: currentY };
 };
 
 export const circlesOverlap = (

@@ -128,7 +128,12 @@ export class ArenaSim {
       const len = Math.hypot(vx, vy);
       vx = (vx / len) * PLAYER_SPEED;
       vy = (vy / len) * PLAYER_SPEED;
-      const next = clampPlayerPosition(player.x + vx * dt, player.y + vy * dt);
+      const next = clampPlayerPosition(
+        player.x,
+        player.y,
+        player.x + vx * dt,
+        player.y + vy * dt
+      );
       player.x = next.x;
       player.y = next.y;
     }
