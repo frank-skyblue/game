@@ -1,6 +1,11 @@
+import {
+  CHARACTER_IDS,
+  getCharacter,
+  type CharacterId,
+} from "./characters";
 import { EMPTY_INPUT, PLAYER_RADIUS, type PlayerInput } from "./constants";
 import type { PlayerSnapshot } from "./types";
-import { getWeapon, type WeaponId } from "./weapons";
+import { getWeapon, V1_WEAPON_IDS, type WeaponId } from "./weapons";
 
 export type BotPersonalityId =
   | "aggressive"
@@ -21,7 +26,7 @@ type BotPersonality = {
   id: BotPersonalityId;
   /** Display names used when spawning unnamed bots. */
   names: string[];
-  /** Preferred weapons — first entries are more likely. */
+  /** Preferred V1 weapons — first entries are more likely. */
   weapons: WeaponId[];
   /** How strongly distance pulls target choice (higher = stick to nearest). */
   distanceWeight: number;
@@ -48,12 +53,24 @@ type BotPersonality = {
   approachChaos: number;
 };
 
-/** Each loadout (class) drives one fixed fight style. */
+/** Each V1 loadout (class) drives one fixed fight style. */
 export const WEAPON_PERSONALITY: Record<WeaponId, BotPersonalityId> = {
   sword: "brawler",
   smg: "aggressive",
   rifle: "hunter",
   sniper: "marksman",
+  pistol: "hunter",
+  knife: "marksman",
+  shuriken: "brawler",
+  grenade: "hunter",
+};
+
+/** V2 characters map to fight styles. */
+export const CHARACTER_PERSONALITY: Record<CharacterId, BotPersonalityId> = {
+  smith: "hunter",
+  alex: "marksman",
+  mad_sam: "aggressive",
+  shinrai: "brawler",
 };
 
 export const BOT_PERSONALITIES: Record<BotPersonalityId, BotPersonality> = {
@@ -142,6 +159,10 @@ export const BOT_PERSONALITIES: Record<BotPersonalityId, BotPersonality> = {
 export const personalityForWeapon = (weaponId: WeaponId): BotPersonalityId =>
   WEAPON_PERSONALITY[weaponId] ?? "aggressive";
 
+export const personalityForCharacter = (
+  characterId: CharacterId
+): BotPersonalityId => CHARACTER_PERSONALITY[characterId] ?? "aggressive";
+
 const basePreferredRange = (weapon: ReturnType<typeof getWeapon>): number => {
   if (weapon.melee) {
     // Stand just inside swing reach — not on the target's center.
@@ -153,6 +174,12 @@ const basePreferredRange = (weapon: ReturnType<typeof getWeapon>): number => {
   if (weapon.id === "smg") {
     return 130;
   }
+  if (weapon.id === "shuriken") {
+    return 200;
+  }
+  if (weapon.id === "grenade") {
+    return 180;
+  }
   return 170;
 };
 
@@ -161,14 +188,21 @@ export const pickBotPersonality = (
 ): BotPersonalityId =>
   BOT_PERSONALITY_IDS[index % BOT_PERSONALITY_IDS.length] ?? "aggressive";
 
+export const pickBotCharacter = (): CharacterId => {
+  const index = Math.floor(Math.random() * CHARACTER_IDS.length);
+  return CHARACTER_IDS[index] ?? "smith";
+};
+
 export const pickBotWeapon = (personalityId: BotPersonalityId): WeaponId => {
   const { weapons } = BOT_PERSONALITIES[personalityId];
+  const pool = weapons.filter((id) => V1_WEAPON_IDS.includes(id));
+  const list = pool.length > 0 ? pool : V1_WEAPON_IDS;
   // Soft bias toward earlier (preferred) weapons.
   const roll = Math.random();
-  if (roll < 0.5) return weapons[0] ?? "rifle";
-  if (roll < 0.78) return weapons[1] ?? weapons[0] ?? "rifle";
-  if (roll < 0.93) return weapons[2] ?? weapons[0] ?? "rifle";
-  return weapons[3] ?? weapons[0] ?? "rifle";
+  if (roll < 0.5) return list[0] ?? "rifle";
+  if (roll < 0.78) return list[1] ?? list[0] ?? "rifle";
+  if (roll < 0.93) return list[2] ?? list[0] ?? "rifle";
+  return list[3] ?? list[0] ?? "rifle";
 };
 
 export const pickBotName = (
@@ -189,7 +223,9 @@ export const pickBotName = (
 };
 
 const healthFraction = (player: PlayerSnapshot): number => {
-  const max = getWeapon(player.weapon).maxHealth;
+  const max = player.character
+    ? getCharacter(player.character).maxHealth
+    : getWeapon(player.weapon).maxHealth;
   return max > 0 ? player.health / max : 1;
 };
 
@@ -202,7 +238,8 @@ const pickTarget = (
   let bestScore = Infinity;
 
   for (const other of others) {
-    if (!other.alive || other.id === bot.id) {
+    // Stealthed players (Alex One-shot) are invisible to bot AI.
+    if (!other.alive || other.id === bot.id || other.stealthed) {
       continue;
     }
     const dist = Math.hypot(other.x - bot.x, other.y - bot.y);
@@ -389,10 +426,36 @@ export const computeBotInput = (
     bot.reloadEndsAt <= 0 &&
     (bot.ammo <= 0 || wantsEarlyReload);
 
+  // V2: occasionally switch slots / use abilities.
+  let slot: 0 | 1 | 2 | 3 = 0;
+  let ability = false;
+  if (bot.character) {
+    const character = getCharacter(bot.character);
+    const phase = botPhase(bot.id);
+    const tick = Math.floor(now / 800 + phase);
+
+    if (character.loadout.secondary && tick % 7 === 0) {
+      // Close → secondary (knife/pistol/shuriken); far → primary.
+      slot = dist < 120 && character.loadout.secondary ? 2 : 1;
+    } else if (character.loadout.utility && dist > 140 && dist < 280 && tick % 11 === 0) {
+      slot = 3;
+    }
+
+    if (character.ability && now >= bot.abilityReadyAt) {
+      if (character.ability === "stealth" && (ownHp < 0.55 || dist < 200)) {
+        ability = Math.sin(now / 900 + phase) > 0.4;
+      } else if (character.ability === "dash" && dist > 80 && dist < 320) {
+        ability = Math.sin(now / 700 + phase) > 0.55;
+      }
+    }
+  }
+
   return {
     ...move,
     aimAngle,
     shooting,
     reload,
+    slot,
+    ability,
   };
 };

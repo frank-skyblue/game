@@ -1,4 +1,12 @@
-export type WeaponId = "rifle" | "smg" | "sniper" | "sword";
+export type WeaponId =
+  | "rifle"
+  | "smg"
+  | "sniper"
+  | "sword"
+  | "pistol"
+  | "knife"
+  | "shuriken"
+  | "grenade";
 
 export type WeaponDef = {
   id: WeaponId;
@@ -14,15 +22,17 @@ export type WeaponDef = {
   bulletLifetimeMs: number;
   bulletRadius: number;
   infiniteAmmo: boolean;
-  /** Player movement speed while this weapon is equipped. */
+  /** Player movement speed while this weapon is equipped (V1 class model). */
   moveSpeed: number;
-  /** Max health while this weapon is equipped. */
+  /** Max health while this weapon is equipped (V1 class model). */
   maxHealth: number;
   /** Melee weapons use a swing arc instead of projectiles. */
   melee: boolean;
   swingMs: number;
   swingArc: number;
   meleeRange: number;
+  /** Thrown explosive that ignores walls (V2 utility). */
+  isGrenade?: boolean;
 };
 
 export const DEFAULT_WEAPON_ID: WeaponId = "rifle";
@@ -104,7 +114,87 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     swingArc: Math.PI * 0.75,
     meleeRange: 54,
   },
+  pistol: {
+    id: "pistol",
+    name: "Pistol",
+    magazineSize: 12,
+    reserveAmmo: 48,
+    damage: 14,
+    fireCooldownMs: 140,
+    reloadMs: 1200,
+    bulletSpeed: 480,
+    bulletLifetimeMs: 1200,
+    bulletRadius: 4,
+    infiniteAmmo: false,
+    moveSpeed: 220,
+    maxHealth: 100,
+    melee: false,
+    swingMs: 0,
+    swingArc: 0,
+    meleeRange: 0,
+  },
+  knife: {
+    id: "knife",
+    name: "Knife",
+    magazineSize: 1,
+    reserveAmmo: 0,
+    damage: 35,
+    fireCooldownMs: 320,
+    reloadMs: 0,
+    bulletSpeed: 0,
+    bulletLifetimeMs: 0,
+    bulletRadius: 0,
+    infiniteAmmo: true,
+    moveSpeed: 150,
+    maxHealth: 75,
+    melee: true,
+    swingMs: 110,
+    swingArc: Math.PI * 0.55,
+    meleeRange: 40,
+  },
+  shuriken: {
+    id: "shuriken",
+    name: "Shuriken",
+    magazineSize: 6,
+    reserveAmmo: 18,
+    damage: 22,
+    fireCooldownMs: 280,
+    reloadMs: 1400,
+    bulletSpeed: 620,
+    bulletLifetimeMs: 900,
+    bulletRadius: 4,
+    infiniteAmmo: false,
+    moveSpeed: 310,
+    maxHealth: 140,
+    melee: false,
+    swingMs: 0,
+    swingArc: 0,
+    meleeRange: 0,
+  },
+  grenade: {
+    id: "grenade",
+    name: "Grenade",
+    magazineSize: 2,
+    reserveAmmo: 4,
+    damage: 55,
+    fireCooldownMs: 900,
+    reloadMs: 2000,
+    bulletSpeed: 280,
+    bulletLifetimeMs: 1200,
+    bulletRadius: 7,
+    infiniteAmmo: false,
+    moveSpeed: 220,
+    maxHealth: 100,
+    melee: false,
+    swingMs: 0,
+    swingArc: 0,
+    meleeRange: 0,
+    isGrenade: true,
+  },
 };
+
+/** Weapons selectable in V1 lobby (class = weapon). */
+export const V1_WEAPON_IDS: WeaponId[] = ["rifle", "smg", "sniper", "sword"];
 
 export const WEAPON_IDS = Object.keys(WEAPONS) as WeaponId[];
 

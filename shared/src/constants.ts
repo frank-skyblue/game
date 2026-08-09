@@ -1,4 +1,5 @@
 import { DEFAULT_ARENA, type Wall } from "./arena";
+import type { LoadoutSlot } from "./characters";
 
 export type { Wall };
 
@@ -47,6 +48,10 @@ export type PlayerInput = {
   aimAngle: number;
   shooting: boolean;
   reload: boolean;
+  /** Wanted loadout slot (1–3). 0 = no change. */
+  slot: 0 | 1 | 2 | 3;
+  /** Ability press (edge-triggered on host). */
+  ability: boolean;
 };
 
 export const EMPTY_INPUT: PlayerInput = {
@@ -57,4 +62,14 @@ export const EMPTY_INPUT: PlayerInput = {
   aimAngle: 0,
   shooting: false,
   reload: false,
+  slot: 0,
+  ability: false,
 };
+
+export type SlotAmmo = {
+  ammo: number;
+  reserveAmmo: number;
+  reloadEndsAt: number;
+};
+
+export type SlotAmmoMap = Partial<Record<LoadoutSlot, SlotAmmo>>;

@@ -9,7 +9,7 @@
 
 ### V2
 
-- Upgraded visuals
+- Lobby mode toggle (V1 weapons / V2 characters); room codes are prefixed `V1-` / `V2-` (fixed in the lobby) so modes cannot join each other
 - 4 playable characters
   - Cpl. Smith
     - Your average rifleman
@@ -20,16 +20,21 @@
   - Alex One-shot
     - Deadly veteran sniper
     - Loadout
-      - Rifle
+      - Rifle (sniper rifle)
       - Knife
       - Ability: Stealth
         - Goes into stealth for 10 seconds, gaining faster movement speed
-        - Attacking or taking too much damage ends the stealth early
+        - Bots cannot see or shoot you while stealthed
+        - Attacking or taking damage ≥ 50% of HP at activation ends stealth early
         - Cool down: 10 seconds
+  - Mad Sam
+    - Crazy Runner Gunner
+    - Loadout
+      - SMG
   - Shinrai Kagekiya
     - Master swordsman
     - Loadout
       - Sword
-      - Shrunken
+      - Shuriken
       - Ability: Dash
         - Dashes forward for a short distance

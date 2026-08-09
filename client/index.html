@@ -56,9 +56,11 @@
       }
 
       #lobby {
-        min-height: 100%;
+        height: 100%;
+        overflow: auto;
         display: grid;
-        place-items: center;
+        justify-items: center;
+        align-content: safe center;
         padding: 24px;
       }
 
@@ -127,9 +129,50 @@
         box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
       }
 
+      .room-code-input {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #07101f;
+        overflow: hidden;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .room-code-input:focus-within {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      }
+
+      .room-code-prefix {
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        border-right: 1px solid var(--line);
+        background: #0b1829;
+        color: var(--cyan);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        user-select: none;
+        flex-shrink: 0;
+      }
+
       #roomCode {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+        border: 0;
+        border-radius: 0;
         text-transform: uppercase;
         letter-spacing: 0.12em;
+        box-shadow: none;
+      }
+
+      #roomCode:focus {
+        outline: none;
+        border: 0;
+        box-shadow: none;
       }
 
       .actions {
@@ -175,13 +218,77 @@
         box-shadow: 0 0 16px rgba(56, 189, 248, 0.18);
       }
 
-      .weapon-grid {
+      .mode-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        margin-bottom: 0;
+      }
+
+      .mode-tab {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-bottom: 0;
+        border-radius: 8px 8px 0 0;
+        background: #07101f;
+        color: var(--muted);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease,
+          color 0.15s ease;
+      }
+
+      .mode-tab + .mode-tab {
+        border-left: 0;
+      }
+
+      .mode-tab:hover,
+      .mode-tab:focus-visible {
+        background: #0f1c30;
+        color: var(--text);
+      }
+
+      .mode-tab[aria-selected="true"] {
+        color: var(--text);
+        background: #0b2740;
+        box-shadow:
+          inset 0 0 0 1px rgba(103, 232, 249, 0.28),
+          0 0 18px rgba(56, 189, 248, 0.2);
+      }
+
+      .mode-tab:focus-visible {
+        outline: 2px solid #67e8f9;
+        outline-offset: 2px;
+        z-index: 1;
+      }
+
+      .mode-tab-panels {
+        margin-bottom: 16px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 0 0 8px 8px;
+        background: color-mix(in srgb, #07101f 92%, #0b2740);
+      }
+
+      .mode-tab-panels .field {
+        margin-bottom: 0;
+      }
+
+      .mode-tab-panel[hidden] {
+        display: none;
+      }
+
+      .weapon-grid,
+      .character-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
       }
 
-      .weapon-option {
+      .weapon-option,
+      .character-option {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -198,12 +305,15 @@
       }
 
       .weapon-option:hover,
-      .weapon-option:focus-visible {
+      .weapon-option:focus-visible,
+      .character-option:hover,
+      .character-option:focus-visible {
         background: #0f1c30;
         border-color: #38bdf8;
       }
 
-      .weapon-option[aria-pressed="true"] {
+      .weapon-option[aria-pressed="true"],
+      .character-option[aria-pressed="true"] {
         border-color: #38bdf8;
         background: #0b2740;
         box-shadow:
@@ -211,15 +321,21 @@
           0 0 18px rgba(56, 189, 248, 0.28);
       }
 
-      .weapon-option .weapon-name {
+      .weapon-option .weapon-name,
+      .character-option .character-name {
         font-size: 1rem;
         font-weight: 700;
       }
 
-      .weapon-option .weapon-stats {
+      .weapon-option .weapon-stats,
+      .character-option .character-stats {
         color: var(--muted);
         font-size: 0.8rem;
         line-height: 1.35;
+      }
+
+      .picker-hidden {
+        display: none !important;
       }
 
       #status {
@@ -422,54 +538,156 @@
           <input id="playerName" maxlength="16" autocomplete="nickname" aria-label="Player name" />
         </div>
 
-        <div class="field">
-          <label id="weaponLabel">Weapon</label>
-          <div
-            class="weapon-grid"
-            id="weaponPicker"
-            role="group"
-            aria-labelledby="weaponLabel"
+        <div
+          class="mode-tabs"
+          id="modeTabs"
+          role="tablist"
+          aria-label="Game mode"
+        >
+          <button
+            type="button"
+            class="mode-tab"
+            id="tabV1"
+            role="tab"
+            data-mode="v1"
+            aria-selected="true"
+            aria-controls="panelV1"
+            tabindex="0"
+            aria-label="V1 weapons"
           >
-            <button
-              type="button"
-              class="weapon-option"
-              data-weapon="rifle"
-              aria-pressed="true"
-              aria-label="Rifle, 30 magazine, 120 reserve, medium damage, medium fire rate"
-            >
-              <span class="weapon-name">Rifle</span>
-              <span class="weapon-stats">30 / 120 · med dmg · med rate</span>
-            </button>
-            <button
-              type="button"
-              class="weapon-option"
-              data-weapon="smg"
-              aria-pressed="false"
-              aria-label="SMG, 60 magazine, 240 reserve, small damage, quick fire rate"
-            >
-              <span class="weapon-name">SMG</span>
-              <span class="weapon-stats">60 / 240 · low dmg · fast rate</span>
-            </button>
-            <button
-              type="button"
-              class="weapon-option"
-              data-weapon="sniper"
-              aria-pressed="false"
-              aria-label="Sniper, 10 magazine, 80 reserve, big damage, low fire rate"
-            >
-              <span class="weapon-name">Sniper</span>
-              <span class="weapon-stats">10 / 80 · high dmg · slow rate</span>
-            </button>
-            <button
-              type="button"
-              class="weapon-option"
-              data-weapon="sword"
-              aria-pressed="false"
-              aria-label="Sword, infinite ammo, big damage, medium fire rate"
-            >
-              <span class="weapon-name">Sword</span>
-              <span class="weapon-stats">∞ · high dmg · med rate · melee</span>
-            </button>
+            V1
+          </button>
+          <button
+            type="button"
+            class="mode-tab"
+            id="tabV2"
+            role="tab"
+            data-mode="v2"
+            aria-selected="false"
+            aria-controls="panelV2"
+            tabindex="-1"
+            aria-label="V2 characters"
+          >
+            V2
+          </button>
+        </div>
+
+        <div class="mode-tab-panels">
+          <div
+            class="mode-tab-panel"
+            id="panelV1"
+            role="tabpanel"
+            aria-labelledby="tabV1"
+          >
+            <div class="field" id="weaponField">
+              <label id="weaponLabel">Weapon</label>
+              <div
+                class="weapon-grid"
+                id="weaponPicker"
+                role="group"
+                aria-labelledby="weaponLabel"
+              >
+                <button
+                  type="button"
+                  class="weapon-option"
+                  data-weapon="rifle"
+                  aria-pressed="true"
+                  aria-label="Rifle, 30 magazine, 120 reserve, medium damage, medium fire rate"
+                >
+                  <span class="weapon-name">Rifle</span>
+                  <span class="weapon-stats">30 / 120 · med dmg · med rate</span>
+                </button>
+                <button
+                  type="button"
+                  class="weapon-option"
+                  data-weapon="smg"
+                  aria-pressed="false"
+                  aria-label="SMG, 60 magazine, 240 reserve, small damage, quick fire rate"
+                >
+                  <span class="weapon-name">SMG</span>
+                  <span class="weapon-stats">60 / 240 · low dmg · fast rate</span>
+                </button>
+                <button
+                  type="button"
+                  class="weapon-option"
+                  data-weapon="sniper"
+                  aria-pressed="false"
+                  aria-label="Sniper, 10 magazine, 80 reserve, big damage, low fire rate"
+                >
+                  <span class="weapon-name">Sniper</span>
+                  <span class="weapon-stats">10 / 80 · high dmg · slow rate</span>
+                </button>
+                <button
+                  type="button"
+                  class="weapon-option"
+                  data-weapon="sword"
+                  aria-pressed="false"
+                  aria-label="Sword, infinite ammo, big damage, medium fire rate"
+                >
+                  <span class="weapon-name">Sword</span>
+                  <span class="weapon-stats">∞ · high dmg · med rate · melee</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="mode-tab-panel"
+            id="panelV2"
+            role="tabpanel"
+            aria-labelledby="tabV2"
+            hidden
+          >
+            <div class="field" id="characterField">
+              <label id="characterLabel">Character</label>
+              <div
+                class="character-grid"
+                id="characterPicker"
+                role="group"
+                aria-labelledby="characterLabel"
+              >
+                <button
+                  type="button"
+                  class="character-option"
+                  data-character="smith"
+                  aria-pressed="true"
+                  aria-label="Cpl. Smith, average rifleman, rifle, pistol, grenade"
+                >
+                  <span class="character-name">Cpl. Smith</span>
+                  <span class="character-stats">Average rifleman · Rifle · Pistol · Grenade</span>
+                </button>
+                <button
+                  type="button"
+                  class="character-option"
+                  data-character="alex"
+                  aria-pressed="false"
+                  aria-label="Alex One-shot, deadly veteran sniper, rifle, knife, stealth"
+                >
+                  <span class="character-name">Alex One-shot</span>
+                  <span class="character-stats">Sniper · Rifle · Knife · Stealth</span>
+                </button>
+                <button
+                  type="button"
+                  class="character-option"
+                  data-character="mad_sam"
+                  aria-pressed="false"
+                  aria-label="Mad Sam, crazy runner gunner, SMG"
+                >
+                  <span class="character-name">Mad Sam</span>
+                  <span class="character-stats">Crazy Runner Gunner · SMG</span>
+                </button>
+                <button
+                  type="button"
+                  class="character-option"
+                  data-character="shinrai"
+                  aria-pressed="false"
+                  aria-label="Shinrai Kagekiya, master swordsman, sword, shuriken, dash"
+                >
+                  <span class="character-name">Shinrai Kagekiya</span>
+                  <span class="character-stats">Swordsman · Sword · Shuriken · Dash</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -495,14 +713,17 @@
 
         <div class="field">
           <label for="roomCode">Room code</label>
-          <input
-            id="roomCode"
-            maxlength="6"
-            autocomplete="off"
-            spellcheck="false"
-            aria-label="Room code"
-            placeholder="ABC123"
-          />
+          <div class="room-code-input" role="group" aria-label="Room code with mode prefix">
+            <span class="room-code-prefix" id="roomCodePrefix" aria-hidden="true">V1-</span>
+            <input
+              id="roomCode"
+              maxlength="6"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Room code suffix"
+              placeholder="ABC123"
+            />
+          </div>
         </div>
 
         <div class="actions">

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  getCharacter,
   getWeapon,
   MAX_PLAYERS,
   PICKUP_RADIUS,
@@ -53,6 +54,11 @@ type BulletView = {
   glow: Phaser.GameObjects.Arc;
 };
 
+type GrenadeView = {
+  core: Phaser.GameObjects.Arc;
+  glow: Phaser.GameObjects.Arc;
+};
+
 type PickupView = {
   kind: PickupKind;
   root: Phaser.GameObjects.Container;
@@ -78,6 +84,10 @@ const WEAPON_SFX: Record<
   rifle: { key: "sfx-rifle", path: "/assets/sfx/rifle.wav", volume: 0.42 },
   sniper: { key: "sfx-sniper", path: "/assets/sfx/sniper.wav", volume: 0.55 },
   sword: { key: "sfx-sword", path: "/assets/sfx/sword.wav", volume: 0.48 },
+  pistol: { key: "sfx-rifle", path: "/assets/sfx/rifle.wav", volume: 0.32 },
+  knife: { key: "sfx-sword", path: "/assets/sfx/sword.wav", volume: 0.4 },
+  shuriken: { key: "sfx-smg", path: "/assets/sfx/smg.wav", volume: 0.35 },
+  grenade: { key: "sfx-sniper", path: "/assets/sfx/sniper.wav", volume: 0.45 },
 };
 
 const lighten = (color: number, amount: number): number => {
@@ -98,17 +108,24 @@ export class GameScene extends Phaser.Scene {
     right: Phaser.Input.Keyboard.Key;
   };
   private reloadKey!: Phaser.Input.Keyboard.Key;
+  private abilityKey!: Phaser.Input.Keyboard.Key;
+  private slot1Key!: Phaser.Input.Keyboard.Key;
+  private slot2Key!: Phaser.Input.Keyboard.Key;
+  private slot3Key!: Phaser.Input.Keyboard.Key;
   private muteKey!: Phaser.Input.Keyboard.Key;
   private music?: Phaser.Sound.BaseSound;
   private playerViews = new Map<string, PlayerView>();
   private swingAnims = new Map<string, SwingAnim>();
   private bulletViews = new Map<string, BulletView>();
+  private grenadeViews = new Map<string, GrenadeView>();
+  private prevGrenadeIds = new Set<string>();
   private pickupViews = new Map<string, PickupView>();
   private prevPickupIds = new Set<string>();
   private prevPlayerFx = new Map<string, PrevPlayerFx>();
   private hudRoom?: Phaser.GameObjects.Text;
   private hudHealth?: Phaser.GameObjects.Text;
   private hudAmmo?: Phaser.GameObjects.Text;
+  private hudAbility?: Phaser.GameObjects.Text;
   private hudScores?: Phaser.GameObjects.Text;
   private hudMusic?: Phaser.GameObjects.Text;
   private shooting = false;
@@ -144,6 +161,10 @@ export class GameScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D,
     }) as typeof this.wasd;
     this.reloadKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.abilityKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    this.slot1Key = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+    this.slot2Key = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+    this.slot3Key = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
     this.muteKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.M);
 
     this.input.on("pointerdown", () => {
@@ -180,8 +201,15 @@ export class GameScene extends Phaser.Scene {
       .setStroke("#020617", 3)
       .setShadow(0, 1, "#020617", 2, true, true);
 
+    this.hudAbility = this.add
+      .text(14, 64, "", { ...hudStyle, color: "#c4b5fd", fontSize: "12px" })
+      .setScrollFactor(0)
+      .setDepth(10)
+      .setStroke("#020617", 3)
+      .setShadow(0, 1, "#020617", 2, true, true);
+
     this.hudMusic = this.add
-      .text(14, 64, "", { ...hudStyle, color: "#94a3b8", fontSize: "12px" })
+      .text(14, 82, "", { ...hudStyle, color: "#94a3b8", fontSize: "12px" })
       .setScrollFactor(0)
       .setDepth(10)
       .setStroke("#020617", 3)
@@ -200,17 +228,17 @@ export class GameScene extends Phaser.Scene {
       .setStroke("#020617", 3)
       .setShadow(0, 1, "#020617", 2, true, true);
 
+    const help =
+      this.room.mode === "v2"
+        ? "WASD · Aim/Click · 1-3 weapons · Q ability · R reload · M mute · Esc leave"
+        : "WASD move · Mouse aim · Click shoot · R reload · M mute · Esc leave";
+
     this.add
-      .text(
-        this.arena.width / 2,
-        this.arena.height - 18,
-        "WASD move · Mouse aim · Click shoot · R reload · M mute · Esc leave",
-        {
-          fontFamily: "Segoe UI, Trebuchet MS, sans-serif",
-          fontSize: "11px",
-          color: "#94a3b8",
-        }
-      )
+      .text(this.arena.width / 2, this.arena.height - 18, help, {
+        fontFamily: "Segoe UI, Trebuchet MS, sans-serif",
+        fontSize: "11px",
+        color: "#94a3b8",
+      })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(10)
@@ -218,7 +246,7 @@ export class GameScene extends Phaser.Scene {
       .setShadow(0, 1, "#020617", 2, true, true);
 
     this.input.keyboard?.on("keydown-ESC", () => {
-      this.room.destroy();
+      this.handleLeaveRequest();
     });
 
     this.muteKey.on("down", () => {
@@ -310,7 +338,7 @@ export class GameScene extends Phaser.Scene {
 
     const weapon = getWeapon(weaponId);
     const sfx = WEAPON_SFX[weapon.id];
-    if (!this.cache.audio.exists(sfx.key)) {
+    if (!sfx || !this.cache.audio.exists(sfx.key)) {
       return;
     }
 
@@ -331,6 +359,11 @@ export class GameScene extends Phaser.Scene {
     const originY = me?.y ?? this.arena.height / 2;
     const aimAngle = Math.atan2(pointer.worldY - originY, pointer.worldX - originX);
 
+    let slot: 0 | 1 | 2 | 3 = 0;
+    if (this.slot1Key.isDown) slot = 1;
+    else if (this.slot2Key.isDown) slot = 2;
+    else if (this.slot3Key.isDown) slot = 3;
+
     const input: PlayerInput = {
       up: this.wasd.up.isDown || Boolean(this.cursors.up?.isDown),
       down: this.wasd.down.isDown || Boolean(this.cursors.down?.isDown),
@@ -339,6 +372,8 @@ export class GameScene extends Phaser.Scene {
       aimAngle,
       shooting: this.shooting || pointer.isDown,
       reload: this.reloadKey.isDown,
+      slot,
+      ability: this.abilityKey.isDown,
     };
 
     this.room.sendInput(input);
@@ -351,8 +386,23 @@ export class GameScene extends Phaser.Scene {
     this.tickSpiritMotion(delta);
   }
 
+  private handleLeaveRequest() {
+    const confirmed = window.confirm(
+      "Leave the match and return to the lobby?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    this.room.destroy();
+  }
+
   private returnToLobby() {
-    window.location.reload();
+    const onLeaveGame = this.game.registry.get("onLeaveGame") as
+      | (() => void)
+      | undefined;
+    window.setTimeout(() => {
+      onLeaveGame?.();
+    }, 0);
   }
 
   private drawArena() {
@@ -420,6 +470,7 @@ export class GameScene extends Phaser.Scene {
     this.latestState = state;
     const seenPlayers = new Set<string>();
     const seenBullets = new Set<string>();
+    const seenGrenades = new Set<string>();
     const seenPickups = new Set<string>();
 
     for (const player of state.players) {
@@ -481,6 +532,49 @@ export class GameScene extends Phaser.Scene {
         this.bulletViews.delete(id);
       }
     }
+
+    for (const grenade of state.grenades ?? []) {
+      seenGrenades.add(grenade.id);
+      let view = this.grenadeViews.get(grenade.id);
+      if (!view) {
+        const glow = this.add.circle(
+          grenade.x,
+          grenade.y,
+          grenade.radius + 6,
+          0xf97316,
+          0.35
+        );
+        glow.setDepth(5);
+        const core = this.add.circle(
+          grenade.x,
+          grenade.y,
+          Math.max(3, grenade.radius),
+          0xfb923c,
+          1
+        );
+        core.setStrokeStyle(2, 0xfef3c7, 0.85);
+        core.setDepth(5);
+        view = { core, glow };
+        this.grenadeViews.set(grenade.id, view);
+        this.playWeaponSfx("grenade", grenade.ownerId);
+        this.spawnMuzzleSpark(grenade.x, grenade.y, grenade.color);
+      }
+      view.core.setPosition(grenade.x, grenade.y);
+      view.glow.setPosition(grenade.x, grenade.y);
+    }
+
+    for (const [id, view] of this.grenadeViews) {
+      if (seenGrenades.has(id)) {
+        continue;
+      }
+      if (this.prevGrenadeIds.has(id) && this.sfxPrimed) {
+        this.spawnDeathBurst(view.core.x, view.core.y, 0xf97316);
+      }
+      view.core.destroy();
+      view.glow.destroy();
+      this.grenadeViews.delete(id);
+    }
+    this.prevGrenadeIds = seenGrenades;
 
     for (const pickup of state.pickups ?? []) {
       seenPickups.add(pickup.id);
@@ -721,7 +815,7 @@ export class GameScene extends Phaser.Scene {
       aimAngle: player.swingAimAngle,
       color: player.color,
     });
-    this.playWeaponSfx("sword", player.id);
+    this.playWeaponSfx(player.weapon, player.id);
   }
 
   private destroyPlayerView(view: PlayerView) {
@@ -846,23 +940,36 @@ export class GameScene extends Phaser.Scene {
     const weapon = getWeapon(player.weapon);
     const isSword = weapon.melee;
     const alive = player.alive;
+    const stealthed = Boolean(player.stealthed && alive);
+    // Local player sees themselves clearer while stealthed; others are faint.
+    const stealthAlpha = stealthed ? (isLocal ? 0.45 : 0.18) : 1;
 
     view.aura.setPosition(player.x, player.y);
     view.core.setPosition(player.x, player.y);
     view.wispOrbit.setPosition(player.x, player.y);
-    view.core.setFillStyle(player.color, alive ? 1 : 0.22);
-    view.aura.setFillStyle(player.color, alive ? (isLocal ? 0.28 : 0.18) : 0.06);
-    view.core.setStrokeStyle(2, alive ? 0xf8fafc : 0x64748b, alive ? 0.85 : 0.4);
+    view.core.setFillStyle(player.color, (alive ? 1 : 0.22) * stealthAlpha);
+    view.aura.setFillStyle(
+      player.color,
+      (alive ? (isLocal ? 0.28 : 0.18) : 0.06) * stealthAlpha
+    );
+    view.core.setStrokeStyle(
+      2,
+      stealthed ? 0xa5b4fc : alive ? 0xf8fafc : 0x64748b,
+      (alive ? 0.85 : 0.4) * stealthAlpha
+    );
+    view.aura.setAlpha(stealthAlpha);
+    view.wispOrbit.setAlpha(stealthAlpha);
 
     for (const wisp of view.wisps) {
-      wisp.setFillStyle(lighten(player.color, 90), alive ? 0.9 : 0.15);
+      wisp.setFillStyle(lighten(player.color, 90), (alive ? 0.9 : 0.15) * stealthAlpha);
       wisp.setVisible(alive);
     }
 
     view.aim.setVisible(!isSword && alive);
     view.aim.setPosition(player.x, player.y);
     view.aim.setRotation(player.aimAngle);
-    view.aim.setFillStyle(lighten(player.color, 40), 1);
+    view.aim.setFillStyle(lighten(player.color, 40), stealthAlpha);
+    view.aim.setAlpha(stealthAlpha);
 
     view.blade.setVisible(isSword && alive);
     view.blade.setPosition(player.x, player.y);
@@ -873,7 +980,7 @@ export class GameScene extends Phaser.Scene {
 
     view.label.setPosition(player.x, player.y - AURA_RADIUS - 10);
     view.label.setText(player.name);
-    view.label.setAlpha(alive ? 1 : 0.4);
+    view.label.setAlpha(alive ? stealthAlpha : 0.4);
 
     if (!isSword || !alive) {
       view.swingTrail.clear();
@@ -1040,7 +1147,6 @@ export class GameScene extends Phaser.Scene {
 
   private updateHud(state: GameState) {
     const me = state.players.find((player) => player.id === this.room.playerId);
-
     this.hudRoom?.setText(
       `Room ${state.roomCode} · ${state.players.length}/${MAX_PLAYERS}`
     );
@@ -1051,7 +1157,15 @@ export class GameScene extends Phaser.Scene {
 
     if (me.alive) {
       const weapon = getWeapon(me.weapon);
-      this.hudHealth?.setText(`HP ${Math.max(0, me.health)}/${weapon.maxHealth}`);
+      const maxHp = me.character
+        ? getCharacter(me.character).maxHealth
+        : weapon.maxHealth;
+      const namePrefix = me.character
+        ? `${getCharacter(me.character).name}  ·  `
+        : "";
+      this.hudHealth?.setText(
+        `${namePrefix}HP ${Math.max(0, me.health)}/${maxHp}`
+      );
       this.hudHealth?.setColor("#6ee7b7");
 
       const reloading = me.reloadEndsAt > 0 && state.serverTime < me.reloadEndsAt;
@@ -1066,10 +1180,52 @@ export class GameScene extends Phaser.Scene {
         );
         this.hudAmmo?.setColor(me.ammo <= 0 ? "#fbbf24" : "#7dd3fc");
       }
+
+      if (me.character) {
+        const character = getCharacter(me.character);
+        const slots = ["primary", "secondary", "utility"] as const;
+        const slotHints = slots
+          .map((slot, index) => {
+            const wid = character.loadout[slot];
+            if (!wid) return null;
+            const label = getWeapon(wid).name;
+            const active = me.activeSlot === slot ? `[${index + 1}:${label}]` : `${index + 1}:${label}`;
+            return active;
+          })
+          .filter(Boolean)
+          .join("  ");
+
+        let abilityText = "";
+        if (character.ability === "stealth") {
+          if (me.stealthed) {
+            const left = Math.max(0, me.stealthEndsAt - state.serverTime);
+            abilityText = `Stealth ${Math.ceil(left / 1000)}s`;
+          } else if (state.serverTime < me.abilityReadyAt) {
+            const left = me.abilityReadyAt - state.serverTime;
+            abilityText = `Stealth CD ${Math.ceil(left / 1000)}s`;
+          } else {
+            abilityText = "Q Stealth ready";
+          }
+        } else if (character.ability === "dash") {
+          if (state.serverTime < me.abilityReadyAt) {
+            const left = me.abilityReadyAt - state.serverTime;
+            abilityText = `Dash CD ${Math.ceil(left / 1000)}s`;
+          } else {
+            abilityText = "Q Dash ready";
+          }
+        }
+
+        this.hudAbility?.setText(
+          [slotHints, abilityText].filter(Boolean).join("  ·  ")
+        );
+      } else {
+        this.hudAbility?.setText("");
+      }
     } else {
       this.hudHealth?.setText("Respawning...");
       this.hudHealth?.setColor("#fbbf24");
       this.hudAmmo?.setText("");
+      this.hudAbility?.setText("");
     }
 
     const lines = state.players

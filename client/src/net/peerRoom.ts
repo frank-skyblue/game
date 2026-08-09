@@ -5,8 +5,16 @@ import {
   DEFAULT_ARENA,
   EMPTY_INPUT,
   MAX_PLAYERS,
+  formatRoomCode,
+  normalizeRoomCodeSuffix,
+  parseCharacterId,
+  parseGameMode,
+  parseWeaponId,
+  roomModeLabel,
   TICK_MS,
   type ArenaDefinition,
+  type CharacterId,
+  type GameMode,
   type GameState,
   type NetMessage,
   type PlayerInput,
@@ -14,18 +22,47 @@ import {
 } from "@pvp-arena/shared";
 
 const peerIdForRoom = (roomCode: string): string =>
-  `pvparena${roomCode.toLowerCase()}`;
+  `pvparena${roomCode.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+
+const resolveRoomCode = (roomCode: string, mode: GameMode): string => {
+  const suffix = normalizeRoomCodeSuffix(roomCode);
+  const expected = formatRoomCode(mode, suffix);
+  const upper = roomCode.trim().toUpperCase();
+  // Reject cross-mode codes (e.g. joining V1-ABC while on V2).
+  if (/^V[12]-/.test(upper) && upper !== expected) {
+    const codeMode = upper.startsWith("V2") ? "v2" : "v1";
+    throw new Error(
+      `This code is for ${roomModeLabel(codeMode)}. Switch to ${roomModeLabel(codeMode)} to join.`
+    );
+  }
+  return expected;
+};
 
 export type PeerRoom = {
   roomCode: string;
   playerId: string;
   isHost: boolean;
+  mode: GameMode;
   arena: ArenaDefinition;
   getState: () => GameState;
   sendInput: (input: PlayerInput) => void;
   onState: (handler: (state: GameState) => void) => void;
   onClose: (handler: () => void) => void;
   destroy: () => void;
+};
+
+export type HostJoinOptions = {
+  mode: GameMode;
+  weapon?: WeaponId;
+  character?: CharacterId;
+  botCount?: number;
+  arena?: ArenaDefinition;
+};
+
+export type GuestJoinOptions = {
+  mode: GameMode;
+  weapon?: WeaponId;
+  character?: CharacterId;
 };
 
 const openPeer = (id?: string): Promise<Peer> =>
@@ -52,23 +89,37 @@ const send = (conn: DataConnection, message: NetMessage) => {
   }
 };
 
+const emptyState = (roomCode: string, mode: GameMode): GameState => ({
+  roomCode,
+  mode,
+  players: [],
+  bullets: [],
+  grenades: [],
+  pickups: [],
+  serverTime: 0,
+});
+
 export const createHostRoom = async (
   roomCode: string,
   name: string,
-  weapon: WeaponId,
-  botCount = 0,
-  arena: ArenaDefinition = DEFAULT_ARENA
+  options: HostJoinOptions
 ): Promise<PeerRoom> => {
-  const code = roomCode.toUpperCase();
+  const mode = parseGameMode(options.mode);
+  const code = resolveRoomCode(roomCode, mode);
   const peer = await openPeer(peerIdForRoom(code));
-  const arenaCopy = cloneArena(arena);
-  const sim = new ArenaSim(code, arenaCopy);
+  const arenaCopy = cloneArena(options.arena ?? DEFAULT_ARENA);
+  const sim = new ArenaSim(code, arenaCopy, mode);
   const hostId = peer.id;
-  sim.addPlayer(hostId, name, weapon);
+
+  if (mode === "v2") {
+    sim.addPlayer(hostId, name, parseCharacterId(options.character));
+  } else {
+    sim.addPlayer(hostId, name, parseWeaponId(options.weapon));
+  }
 
   const botsToAdd = Math.max(
     0,
-    Math.min(botCount, MAX_PLAYERS - sim.getPlayerCount())
+    Math.min(options.botCount ?? 0, MAX_PLAYERS - sim.getPlayerCount())
   );
   for (let i = 0; i < botsToAdd; i += 1) {
     sim.addBot();
@@ -102,13 +153,31 @@ export const createHostRoom = async (
           conn.close();
           return;
         }
+        const joinMode = parseGameMode(message.mode);
+        if (joinMode !== mode) {
+          send(conn, {
+            type: "join_reject",
+            reason:
+              mode === "v2"
+                ? "This room is V2 (characters). Switch to V2 and pick a character."
+                : "This room is V1 (weapons). Switch to V1 and pick a weapon.",
+          });
+          conn.close();
+          return;
+        }
+
         connections.set(conn.peer, conn);
-        sim.addPlayer(conn.peer, message.name, message.weapon);
+        if (mode === "v2") {
+          sim.addPlayer(conn.peer, message.name, parseCharacterId(message.character));
+        } else {
+          sim.addPlayer(conn.peer, message.name, parseWeaponId(message.weapon));
+        }
         send(conn, {
           type: "join_ok",
           playerId: conn.peer,
           state: sim.getState(),
           arena: arenaCopy,
+          mode,
         });
         broadcastState();
         return;
@@ -150,6 +219,7 @@ export const createHostRoom = async (
     roomCode: code,
     playerId: hostId,
     isHost: true,
+    mode,
     arena: arenaCopy,
     getState: () => sim.getState(),
     sendInput: (input) => {
@@ -169,21 +239,17 @@ export const createHostRoom = async (
 export const joinGuestRoom = async (
   roomCode: string,
   name: string,
-  weapon: WeaponId
+  options: GuestJoinOptions
 ): Promise<PeerRoom> => {
-  const code = roomCode.toUpperCase();
+  const mode = parseGameMode(options.mode);
+  const code = resolveRoomCode(roomCode, mode);
   const peer = await openPeer();
   const hostId = peerIdForRoom(code);
 
-  let state: GameState = {
-    roomCode: code,
-    players: [],
-    bullets: [],
-    pickups: [],
-    serverTime: 0,
-  };
+  let state: GameState = emptyState(code, mode);
   let arena: ArenaDefinition = cloneArena(DEFAULT_ARENA);
   let playerId = peer.id;
+  let joinedMode = mode;
   let stateHandler: ((next: GameState) => void) | null = null;
   let closeHandler: (() => void) | null = null;
   let closed = false;
@@ -198,7 +264,13 @@ export const joinGuestRoom = async (
       }, 8000);
 
       conn.once("open", () => {
-        send(conn, { type: "join", name, weapon });
+        send(conn, {
+          type: "join",
+          name,
+          mode,
+          weapon: options.weapon,
+          character: options.character,
+        });
       });
 
       conn.once("error", (error) => {
@@ -212,6 +284,7 @@ export const joinGuestRoom = async (
           playerId = message.playerId;
           state = message.state;
           arena = cloneArena(message.arena ?? DEFAULT_ARENA);
+          joinedMode = parseGameMode(message.mode ?? message.state.mode);
           conn.off("data", onData);
           window.clearTimeout(timeout);
           resolve();
@@ -270,6 +343,7 @@ export const joinGuestRoom = async (
     roomCode: code,
     playerId,
     isHost: false,
+    mode: joinedMode,
     arena,
     getState: () => state,
     sendInput: (input) => {

@@ -31,11 +31,18 @@ Without `DATABASE_URL`, the lobby still works with the built-in Classic arena; s
 
 Level editor: http://localhost:5173/editor
 
+## Modes
+
+- **V1** — pick a weapon class (Rifle / SMG / Sniper / Sword); room codes start with fixed `V1-`
+- **V2** — pick a character with a loadout and optional ability; room codes start with fixed `V2-` (cannot join V1 rooms)
+
 ## Controls
 
 - **WASD** / arrows — move
 - **Mouse** — aim
-- **Click** — shoot
+- **Click** — shoot / melee / throw
+- **1 / 2 / 3** — switch loadout slots (V2)
+- **Q** — ability (V2: Stealth / Dash)
 - **R** — reload
 - **M** — mute / unmute sound
 - **Esc** — leave

@@ -1,5 +1,6 @@
 import type { ArenaDefinition } from "./arena";
-import type { PlayerInput } from "./constants";
+import type { CharacterId, GameMode, LoadoutSlot } from "./characters";
+import type { PlayerInput, SlotAmmoMap } from "./constants";
 import type { WeaponId } from "./weapons";
 
 export type PlayerSnapshot = {
@@ -9,6 +10,7 @@ export type PlayerSnapshot = {
   y: number;
   aimAngle: number;
   health: number;
+  /** Resolved active weapon (for combat + rendering). */
   weapon: WeaponId;
   ammo: number;
   reserveAmmo: number;
@@ -22,6 +24,20 @@ export type PlayerSnapshot = {
   color: number;
   alive: boolean;
   respawnAt: number;
+  /** V2 character id; undefined in V1. */
+  character?: CharacterId;
+  /** V2 active loadout slot. */
+  activeSlot: LoadoutSlot;
+  /** V2 per-slot ammo state. */
+  slotAmmo: SlotAmmoMap;
+  stealthed: boolean;
+  stealthEndsAt: number;
+  stealthHpAtStart: number;
+  stealthDamageTaken: number;
+  abilityReadyAt: number;
+  dashEndsAt: number;
+  dashVx: number;
+  dashVy: number;
 };
 
 export type BulletSnapshot = {
@@ -36,6 +52,18 @@ export type BulletSnapshot = {
   color: number;
 };
 
+export type GrenadeSnapshot = {
+  id: string;
+  ownerId: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  color: number;
+  explodesAt: number;
+};
+
 export type PickupKind = "health" | "ammo";
 
 export type PickupSnapshot = {
@@ -47,19 +75,28 @@ export type PickupSnapshot = {
 
 export type GameState = {
   roomCode: string;
+  mode: GameMode;
   players: PlayerSnapshot[];
   bullets: BulletSnapshot[];
+  grenades: GrenadeSnapshot[];
   pickups: PickupSnapshot[];
   serverTime: number;
 };
 
 export type NetMessage =
-  | { type: "join"; name: string; weapon: WeaponId }
+  | {
+      type: "join";
+      name: string;
+      mode: GameMode;
+      weapon?: WeaponId;
+      character?: CharacterId;
+    }
   | {
       type: "join_ok";
       playerId: string;
       state: GameState;
       arena: ArenaDefinition;
+      mode: GameMode;
     }
   | { type: "join_reject"; reason: string }
   | { type: "input"; input: PlayerInput }
