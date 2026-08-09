@@ -51,13 +51,22 @@ const send = (conn: DataConnection, message: NetMessage) => {
 export const createHostRoom = async (
   roomCode: string,
   name: string,
-  weapon: WeaponId
+  weapon: WeaponId,
+  botCount = 0
 ): Promise<PeerRoom> => {
   const code = roomCode.toUpperCase();
   const peer = await openPeer(peerIdForRoom(code));
   const sim = new ArenaSim(code);
   const hostId = peer.id;
   sim.addPlayer(hostId, name, weapon);
+
+  const botsToAdd = Math.max(
+    0,
+    Math.min(botCount, MAX_PLAYERS - sim.getPlayerCount())
+  );
+  for (let i = 0; i < botsToAdd; i += 1) {
+    sim.addBot();
+  }
 
   const connections = new Map<string, DataConnection>();
   let stateHandler: ((state: GameState) => void) | null = null;

@@ -2,6 +2,7 @@ import {
   ARENA_HEIGHT,
   ARENA_WIDTH,
   PLAYER_RADIUS,
+  SPAWN_POINTS,
   WALLS,
   type Wall,
 } from "./constants";
@@ -68,6 +69,38 @@ export const circlesOverlap = (
   const dy = ay - by;
   const r = ar + br;
   return dx * dx + dy * dy <= r * r;
+};
+
+/** Rejection-sample a spawn that clears walls (and optional occupied circles). */
+export const findRandomFreeSpawn = (
+  occupied: Array<{ x: number; y: number; radius?: number }> = [],
+  radius = PLAYER_RADIUS,
+  maxAttempts = 48
+): { x: number; y: number } => {
+  const margin = radius + 2;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const x = margin + Math.random() * (ARENA_WIDTH - margin * 2);
+    const y = margin + Math.random() * (ARENA_HEIGHT - margin * 2);
+
+    if (circleHitsAnyWall(x, y, radius)) {
+      continue;
+    }
+
+    const blocked = occupied.some((other) =>
+      circlesOverlap(x, y, radius, other.x, other.y, other.radius ?? PLAYER_RADIUS)
+    );
+    if (blocked) {
+      continue;
+    }
+
+    return { x, y };
+  }
+
+  const fallback =
+    SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)] ??
+    SPAWN_POINTS[0];
+  return { x: fallback.x, y: fallback.y };
 };
 
 export const bulletHitsWallOrBounds = (

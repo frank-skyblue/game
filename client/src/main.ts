@@ -3,7 +3,9 @@ import { GameScene } from "./scenes/GameScene";
 import {
   ARENA_HEIGHT,
   ARENA_WIDTH,
+  DEFAULT_BOT_COUNT,
   DEFAULT_WEAPON_ID,
+  MAX_PLAYERS,
   parseWeaponId,
   type WeaponId,
 } from "@pvp-arena/shared";
@@ -13,6 +15,7 @@ const lobbyEl = document.getElementById("lobby");
 const gameEl = document.getElementById("game");
 const nameInput = document.getElementById("playerName") as HTMLInputElement;
 const codeInput = document.getElementById("roomCode") as HTMLInputElement;
+const botCountInput = document.getElementById("botCount") as HTMLInputElement;
 const createBtn = document.getElementById("createBtn") as HTMLButtonElement;
 const joinBtn = document.getElementById("joinBtn") as HTMLButtonElement;
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
@@ -21,6 +24,7 @@ const weaponButtons = Array.from(
 );
 
 nameInput.value = `Pilot${Math.floor(Math.random() * 90 + 10)}`;
+botCountInput.value = String(DEFAULT_BOT_COUNT);
 
 let selectedWeapon: WeaponId = DEFAULT_WEAPON_ID;
 
@@ -52,6 +56,14 @@ const randomCode = (): string => {
 };
 
 const getName = (): string => nameInput.value.trim().slice(0, 16) || "Pilot";
+
+const getBotCount = (): number => {
+  const parsed = Number.parseInt(botCountInput.value, 10);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_BOT_COUNT;
+  }
+  return Math.max(0, Math.min(MAX_PLAYERS - 1, Math.floor(parsed)));
+};
 
 let game: Phaser.Game | null = null;
 
@@ -90,7 +102,7 @@ const handleCreate = async () => {
   joinBtn.disabled = true;
 
   try {
-    const room = await createHostRoom(roomCode, name, selectedWeapon);
+    const room = await createHostRoom(roomCode, name, selectedWeapon, getBotCount());
     codeInput.value = roomCode;
     setStatus("");
     startGame(room);

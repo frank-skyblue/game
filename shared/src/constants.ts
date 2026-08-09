@@ -9,9 +9,19 @@ export const PLAYER_SPEED = 220;
 export const PLAYER_MAX_HEALTH = 100;
 export const RESPAWN_MS = 2500;
 
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = 8;
+export const DEFAULT_BOT_COUNT = 2;
 
-export const PLAYER_COLORS = [0x3b82f6, 0xef4444, 0x22c55e, 0xf59e0b] as const;
+export const PLAYER_COLORS = [
+  0x3b82f6,
+  0xef4444,
+  0x22c55e,
+  0xf59e0b,
+  0xa855f7,
+  0x14b8a6,
+  0xf43f5e,
+  0x84cc16,
+] as const;
 
 export type Wall = {
   x: number;

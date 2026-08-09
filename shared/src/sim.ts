@@ -12,11 +12,14 @@ import {
   bulletHitsWallOrBounds,
   circlesOverlap,
   clampPlayerPosition,
+  findRandomFreeSpawn,
 } from "./collision";
+import { computeBotInput } from "./bots";
 import type { BulletSnapshot, GameState, PlayerSnapshot } from "./types";
 import {
   getWeapon,
   parseWeaponId,
+  WEAPON_IDS,
   swingBladeAngle,
   type WeaponId,
 } from "./weapons";
@@ -46,11 +49,13 @@ export class ArenaSim {
   roomCode: string;
   private players = new Map<string, PlayerSnapshot>();
   private inputs = new Map<string, PlayerInput>();
+  private botIds = new Set<string>();
   private lastShotAt = new Map<string, number>();
   private swingHits = new Map<string, Set<string>>();
   private wasShooting = new Map<string, boolean>();
   private bullets: InternalBullet[] = [];
   private nextBulletId = 1;
+  private nextBotId = 1;
   private colorIndex = 0;
   private serverTime = 0;
 
@@ -62,8 +67,15 @@ export class ArenaSim {
     return this.players.size;
   }
 
-  addPlayer(id: string, name: string, weaponId?: WeaponId | string): PlayerSnapshot {
-    const spawn = SPAWN_POINTS[this.players.size % SPAWN_POINTS.length] ?? SPAWN_POINTS[0];
+  addPlayer(
+    id: string,
+    name: string,
+    weaponId?: WeaponId | string,
+    options?: { freeSpawn?: boolean }
+  ): PlayerSnapshot {
+    const spawn = options?.freeSpawn
+      ? findRandomFreeSpawn([...this.players.values()])
+      : (SPAWN_POINTS[this.players.size % SPAWN_POINTS.length] ?? SPAWN_POINTS[0]);
     const weapon = getWeapon(parseWeaponId(weaponId));
     const player: PlayerSnapshot = {
       id,
@@ -91,9 +103,20 @@ export class ArenaSim {
     return player;
   }
 
+  addBot(name?: string, weaponId?: WeaponId | string): PlayerSnapshot {
+    const id = `bot-${this.nextBotId}`;
+    const label = name?.trim() || `Bot ${this.nextBotId}`;
+    const weapon =
+      weaponId ?? WEAPON_IDS[Math.floor(Math.random() * WEAPON_IDS.length)];
+    this.nextBotId += 1;
+    this.botIds.add(id);
+    return this.addPlayer(id, label, weapon, { freeSpawn: true });
+  }
+
   removePlayer(id: string) {
     this.players.delete(id);
     this.inputs.delete(id);
+    this.botIds.delete(id);
     this.lastShotAt.delete(id);
     this.swingHits.delete(id);
     this.wasShooting.delete(id);
@@ -118,10 +141,27 @@ export class ArenaSim {
     const now = Date.now();
     this.serverTime = now;
 
+    this.updateBotInputs(now);
+
     for (const [id, player] of this.players) {
       this.updatePlayer(player, id, dt, now);
     }
     this.updateBullets(dt, now);
+  }
+
+  private updateBotInputs(now: number) {
+    if (this.botIds.size === 0) {
+      return;
+    }
+
+    const snapshots = [...this.players.values()];
+    for (const botId of this.botIds) {
+      const bot = this.players.get(botId);
+      if (!bot) {
+        continue;
+      }
+      this.setInput(botId, computeBotInput(bot, snapshots, now));
+    }
   }
 
   getState(): GameState {
@@ -379,9 +419,11 @@ export class ArenaSim {
   }
 
   private respawnPlayer(player: PlayerSnapshot) {
-    const spawn =
-      SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)] ??
-      SPAWN_POINTS[0];
+    const others = [...this.players.values()].filter((p) => p.id !== player.id);
+    const spawn = this.botIds.has(player.id)
+      ? findRandomFreeSpawn(others)
+      : (SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)] ??
+        SPAWN_POINTS[0]);
     player.x = spawn.x;
     player.y = spawn.y;
     player.health = PLAYER_MAX_HEALTH;
