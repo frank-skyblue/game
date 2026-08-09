@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { validateArena } from "../../shared/src/arena";
-import { getSql } from "../_lib/db";
+import { asJsonb, getSql } from "../_lib/db";
 import { json, readJsonBody } from "../_lib/http";
 import { rowToListItem, type MapRow } from "../_lib/maps";
 import { createEditToken, createMapId, hashEditToken } from "../_lib/tokens";
@@ -62,8 +62,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ${author},
           ${arena.width},
           ${arena.height},
-          ${arena.walls as unknown as string},
-          ${arena.spawnPoints as unknown as string},
+          ${asJsonb(arena.walls)}::jsonb,
+          ${asJsonb(arena.spawnPoints)}::jsonb,
           ${editTokenHash}
         )
       `;

@@ -13,3 +13,9 @@ export const getSql = (): NeonQueryFunction<false, false> => {
   sql = neon(url);
   return sql;
 };
+
+/**
+ * Neon serializes JS arrays as Postgres arrays, not JSON.
+ * Stringify and cast so jsonb columns receive valid JSON text.
+ */
+export const asJsonb = (value: unknown): string => JSON.stringify(value);
