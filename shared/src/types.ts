@@ -1,4 +1,5 @@
 import type { PlayerInput } from "./constants";
+import type { WeaponId } from "./weapons";
 
 export type PlayerSnapshot = {
   id: string;
@@ -7,6 +8,14 @@ export type PlayerSnapshot = {
   y: number;
   aimAngle: number;
   health: number;
+  weapon: WeaponId;
+  ammo: number;
+  reserveAmmo: number;
+  reloadEndsAt: number;
+  /** Host timestamp when the current sword swing began; 0 if idle. */
+  swingStartedAt: number;
+  /** Aim angle locked at the start of the swing. */
+  swingAimAngle: number;
   kills: number;
   deaths: number;
   color: number;
@@ -21,6 +30,8 @@ export type BulletSnapshot = {
   y: number;
   vx: number;
   vy: number;
+  radius: number;
+  damage: number;
   color: number;
 };
 
@@ -32,7 +43,7 @@ export type GameState = {
 };
 
 export type NetMessage =
-  | { type: "join"; name: string }
+  | { type: "join"; name: string; weapon: WeaponId }
   | { type: "join_ok"; playerId: string; state: GameState }
   | { type: "join_reject"; reason: string }
   | { type: "input"; input: PlayerInput }

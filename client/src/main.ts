@@ -1,6 +1,12 @@
 import Phaser from "phaser";
 import { GameScene } from "./scenes/GameScene";
-import { ARENA_HEIGHT, ARENA_WIDTH } from "@pvp-arena/shared";
+import {
+  ARENA_HEIGHT,
+  ARENA_WIDTH,
+  DEFAULT_WEAPON_ID,
+  parseWeaponId,
+  type WeaponId,
+} from "@pvp-arena/shared";
 import { createHostRoom, joinGuestRoom, type PeerRoom } from "./net/peerRoom";
 
 const lobbyEl = document.getElementById("lobby");
@@ -10,12 +16,31 @@ const codeInput = document.getElementById("roomCode") as HTMLInputElement;
 const createBtn = document.getElementById("createBtn") as HTMLButtonElement;
 const joinBtn = document.getElementById("joinBtn") as HTMLButtonElement;
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
+const weaponButtons = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("[data-weapon]")
+);
 
 nameInput.value = `Pilot${Math.floor(Math.random() * 90 + 10)}`;
+
+let selectedWeapon: WeaponId = DEFAULT_WEAPON_ID;
 
 const setStatus = (message: string) => {
   statusEl.textContent = message;
 };
+
+const setSelectedWeapon = (weapon: WeaponId) => {
+  selectedWeapon = weapon;
+  for (const button of weaponButtons) {
+    const isSelected = button.dataset.weapon === weapon;
+    button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+  }
+};
+
+for (const button of weaponButtons) {
+  button.addEventListener("click", () => {
+    setSelectedWeapon(parseWeaponId(button.dataset.weapon));
+  });
+}
 
 const randomCode = (): string => {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -65,7 +90,7 @@ const handleCreate = async () => {
   joinBtn.disabled = true;
 
   try {
-    const room = await createHostRoom(roomCode, name);
+    const room = await createHostRoom(roomCode, name, selectedWeapon);
     codeInput.value = roomCode;
     setStatus("");
     startGame(room);
@@ -93,7 +118,7 @@ const handleJoin = async () => {
   joinBtn.disabled = true;
 
   try {
-    const room = await joinGuestRoom(roomCode, name);
+    const room = await joinGuestRoom(roomCode, name, selectedWeapon);
     setStatus("");
     startGame(room);
   } catch (error) {

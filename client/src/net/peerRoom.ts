@@ -7,6 +7,7 @@ import {
   type GameState,
   type NetMessage,
   type PlayerInput,
+  type WeaponId,
 } from "@pvp-arena/shared";
 
 const peerIdForRoom = (roomCode: string): string =>
@@ -49,13 +50,14 @@ const send = (conn: DataConnection, message: NetMessage) => {
 
 export const createHostRoom = async (
   roomCode: string,
-  name: string
+  name: string,
+  weapon: WeaponId
 ): Promise<PeerRoom> => {
   const code = roomCode.toUpperCase();
   const peer = await openPeer(peerIdForRoom(code));
   const sim = new ArenaSim(code);
   const hostId = peer.id;
-  sim.addPlayer(hostId, name);
+  sim.addPlayer(hostId, name, weapon);
 
   const connections = new Map<string, DataConnection>();
   let stateHandler: ((state: GameState) => void) | null = null;
@@ -86,7 +88,7 @@ export const createHostRoom = async (
           return;
         }
         connections.set(conn.peer, conn);
-        sim.addPlayer(conn.peer, message.name);
+        sim.addPlayer(conn.peer, message.name, message.weapon);
         send(conn, {
           type: "join_ok",
           playerId: conn.peer,
@@ -149,7 +151,8 @@ export const createHostRoom = async (
 
 export const joinGuestRoom = async (
   roomCode: string,
-  name: string
+  name: string,
+  weapon: WeaponId
 ): Promise<PeerRoom> => {
   const code = roomCode.toUpperCase();
   const peer = await openPeer();
@@ -176,7 +179,7 @@ export const joinGuestRoom = async (
       }, 8000);
 
       conn.once("open", () => {
-        send(conn, { type: "join", name });
+        send(conn, { type: "join", name, weapon });
       });
 
       conn.once("error", (error) => {

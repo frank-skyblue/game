@@ -1,7 +1,6 @@
 import {
   ARENA_HEIGHT,
   ARENA_WIDTH,
-  BULLET_RADIUS,
   PLAYER_RADIUS,
   WALLS,
   type Wall,
@@ -71,14 +70,18 @@ export const circlesOverlap = (
   return dx * dx + dy * dy <= r * r;
 };
 
-export const bulletHitsWallOrBounds = (x: number, y: number): boolean => {
+export const bulletHitsWallOrBounds = (
+  x: number,
+  y: number,
+  radius: number
+): boolean => {
   if (
-    x < BULLET_RADIUS ||
-    y < BULLET_RADIUS ||
-    x > ARENA_WIDTH - BULLET_RADIUS ||
-    y > ARENA_HEIGHT - BULLET_RADIUS
+    x < radius ||
+    y < radius ||
+    x > ARENA_WIDTH - radius ||
+    y > ARENA_HEIGHT - radius
   ) {
     return true;
   }
-  return circleHitsAnyWall(x, y, BULLET_RADIUS);
+  return circleHitsAnyWall(x, y, radius);
 };

@@ -8,12 +8,6 @@ export const PLAYER_RADIUS = 16;
 export const PLAYER_SPEED = 220;
 export const PLAYER_MAX_HEALTH = 100;
 export const RESPAWN_MS = 2500;
-export const FIRE_COOLDOWN_MS = 180;
-
-export const BULLET_RADIUS = 5;
-export const BULLET_SPEED = 480;
-export const BULLET_DAMAGE = 20;
-export const BULLET_LIFETIME_MS = 1500;
 
 export const MAX_PLAYERS = 4;
 
@@ -49,6 +43,7 @@ export type PlayerInput = {
   right: boolean;
   aimAngle: number;
   shooting: boolean;
+  reload: boolean;
 };
 
 export const EMPTY_INPUT: PlayerInput = {
@@ -58,4 +53,5 @@ export const EMPTY_INPUT: PlayerInput = {
   right: false,
   aimAngle: 0,
   shooting: false,
+  reload: false,
 };
