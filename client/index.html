@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PvP Arena</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #111827;
+        --line: #334155;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #1d4ed8;
+        --accent-hover: #2563eb;
+        --warn: #fbbf24;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at top, #1e293b 0%, transparent 55%),
+          linear-gradient(180deg, #0b1220 0%, #020617 100%);
+        color: var(--text);
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      }
+
+      #lobby {
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      #lobby.hidden {
+        display: none;
+      }
+
+      .panel {
+        width: min(440px, 100%);
+        padding: 36px 32px 28px;
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      h1 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.4rem, 6vw, 3.2rem);
+        letter-spacing: 0.04em;
+        font-weight: 700;
+      }
+
+      .tagline {
+        margin: 10px 0 28px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        color: #cbd5e1;
+        font-size: 0.9rem;
+      }
+
+      .field {
+        margin-bottom: 16px;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0f172a;
+        color: var(--text);
+        font: inherit;
+        font-size: 1rem;
+      }
+
+      input:focus {
+        outline: 2px solid #3b82f6;
+        outline-offset: 1px;
+      }
+
+      #roomCode {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 8px;
+        padding: 12px 14px;
+        background: var(--accent);
+        color: var(--text);
+        font: inherit;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button:focus-visible {
+        background: var(--accent-hover);
+      }
+
+      button:focus-visible {
+        outline: 2px solid #93c5fd;
+        outline-offset: 2px;
+      }
+
+      button.secondary {
+        background: #1e293b;
+        border: 1px solid var(--line);
+      }
+
+      button.secondary:hover,
+      button.secondary:focus-visible {
+        background: #334155;
+      }
+
+      #status {
+        min-height: 1.4em;
+        margin: 16px 0 0;
+        color: var(--warn);
+        font-size: 0.95rem;
+      }
+
+      #game {
+        width: 100%;
+        height: 100%;
+      }
+
+      #game.hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="lobby">
+      <div class="panel">
+        <h1>PVP ARENA</h1>
+        <p class="tagline">Top-down deathmatch. Create a room, share the code, and keep the host tab open.</p>
+
+        <div class="field">
+          <label for="playerName">Name</label>
+          <input id="playerName" maxlength="16" autocomplete="nickname" aria-label="Player name" />
+        </div>
+
+        <div class="field">
+          <label for="roomCode">Room code</label>
+          <input
+            id="roomCode"
+            maxlength="6"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Room code"
+            placeholder="ABC123"
+          />
+        </div>
+
+        <div class="actions">
+          <button id="createBtn" type="button" aria-label="Create room">Create room</button>
+          <button id="joinBtn" class="secondary" type="button" aria-label="Join room">Join room</button>
+        </div>
+
+        <p id="status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="game" class="hidden"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

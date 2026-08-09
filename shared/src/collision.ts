@@ -1,0 +1,75 @@
+import {
+  ARENA_HEIGHT,
+  ARENA_WIDTH,
+  BULLET_RADIUS,
+  PLAYER_RADIUS,
+  WALLS,
+  type Wall,
+} from "./constants";
+
+export const circleHitsWall = (
+  x: number,
+  y: number,
+  radius: number,
+  wall: Wall
+): boolean => {
+  const nearestX = Math.max(wall.x, Math.min(x, wall.x + wall.width));
+  const nearestY = Math.max(wall.y, Math.min(y, wall.y + wall.height));
+  const dx = x - nearestX;
+  const dy = y - nearestY;
+  return dx * dx + dy * dy < radius * radius;
+};
+
+export const circleHitsAnyWall = (
+  x: number,
+  y: number,
+  radius: number
+): boolean => WALLS.some((wall) => circleHitsWall(x, y, radius, wall));
+
+export const clampPlayerPosition = (
+  x: number,
+  y: number
+): { x: number; y: number } => {
+  const nextX = Math.max(PLAYER_RADIUS, Math.min(ARENA_WIDTH - PLAYER_RADIUS, x));
+  const nextY = Math.max(PLAYER_RADIUS, Math.min(ARENA_HEIGHT - PLAYER_RADIUS, y));
+
+  if (!circleHitsAnyWall(nextX, nextY, PLAYER_RADIUS)) {
+    return { x: nextX, y: nextY };
+  }
+
+  if (!circleHitsAnyWall(nextX, y, PLAYER_RADIUS)) {
+    return { x: nextX, y };
+  }
+
+  if (!circleHitsAnyWall(x, nextY, PLAYER_RADIUS)) {
+    return { x, y: nextY };
+  }
+
+  return { x, y };
+};
+
+export const circlesOverlap = (
+  ax: number,
+  ay: number,
+  ar: number,
+  bx: number,
+  by: number,
+  br: number
+): boolean => {
+  const dx = ax - bx;
+  const dy = ay - by;
+  const r = ar + br;
+  return dx * dx + dy * dy <= r * r;
+};
+
+export const bulletHitsWallOrBounds = (x: number, y: number): boolean => {
+  if (
+    x < BULLET_RADIUS ||
+    y < BULLET_RADIUS ||
+    x > ARENA_WIDTH - BULLET_RADIUS ||
+    y > ARENA_HEIGHT - BULLET_RADIUS
+  ) {
+    return true;
+  }
+  return circleHitsAnyWall(x, y, BULLET_RADIUS);
+};

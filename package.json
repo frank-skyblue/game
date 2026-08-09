@@ -1,0 +1,13 @@
+{
+  "name": "pvp-arena",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run build -w shared && npm run dev -w client",
+    "build": "npm run build -w shared && npm run build -w client",
+    "preview": "npm run preview -w client"
+  }
+}
