@@ -1,3 +1,4 @@
+export * from "./arena";
 export * from "./constants";
 export * from "./weapons";
 export * from "./types";

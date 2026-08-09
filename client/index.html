@@ -196,6 +196,173 @@
       #game.hidden {
         display: none;
       }
+
+      #editor.hidden {
+        display: none;
+      }
+
+      #editor {
+        min-height: 100%;
+        overflow: auto;
+        padding: 20px 24px 40px;
+      }
+
+      .editor-shell {
+        width: min(1200px, 100%);
+        margin: 0 auto;
+      }
+
+      .editor-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+
+      .editor-header h1 {
+        margin: 6px 0 0;
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+      }
+
+      .editor-back {
+        color: #93c5fd;
+        text-decoration: none;
+        font-size: 0.95rem;
+      }
+
+      .editor-back:hover,
+      .editor-back:focus-visible {
+        text-decoration: underline;
+      }
+
+      .editor-tagline {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .editor-status {
+        margin: 0;
+        color: var(--warn);
+        max-width: 320px;
+        text-align: right;
+      }
+
+      .editor-layout {
+        display: grid;
+        grid-template-columns: minmax(240px, 300px) 1fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .editor-sidebar {
+        padding: 18px;
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+
+      .editor-hint {
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.4;
+        margin: 0 0 14px;
+      }
+
+      .tool-row,
+      .editor-actions,
+      .load-row {
+        display: grid;
+        gap: 8px;
+      }
+
+      .tool-row {
+        grid-template-columns: 1fr 1fr 1fr;
+        margin-bottom: 12px;
+      }
+
+      .editor-actions {
+        margin-bottom: 16px;
+      }
+
+      .load-row {
+        grid-template-columns: 1fr auto;
+      }
+
+      .tool-btn {
+        background: #0f172a;
+        border: 1px solid var(--line);
+      }
+
+      .tool-btn[aria-pressed="true"] {
+        background: #172554;
+        border-color: #3b82f6;
+      }
+
+      .editor-meta {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .editor-canvas-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #020617;
+        padding: 12px;
+      }
+
+      #editorCanvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        cursor: crosshair;
+        touch-action: none;
+      }
+
+      select {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0f172a;
+        color: var(--text);
+        font: inherit;
+        font-size: 1rem;
+      }
+
+      .lobby-links {
+        margin-top: 18px;
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .lobby-links a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+
+      .lobby-links a:hover,
+      .lobby-links a:focus-visible {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 860px) {
+        .editor-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-header {
+          flex-direction: column;
+        }
+
+        .editor-status {
+          text-align: left;
+          max-width: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -274,6 +441,13 @@
         </div>
 
         <div class="field">
+          <label for="mapSelect">Arena map (host only)</label>
+          <select id="mapSelect" aria-label="Arena map">
+            <option value="builtin">Classic (built-in)</option>
+          </select>
+        </div>
+
+        <div class="field">
           <label for="roomCode">Room code</label>
           <input
             id="roomCode"
@@ -290,9 +464,15 @@
           <button id="joinBtn" class="secondary" type="button" aria-label="Join room">Join room</button>
         </div>
 
+        <div class="lobby-links">
+          <a href="/editor" aria-label="Open level editor">Level editor</a>
+        </div>
+
         <p id="status" role="status" aria-live="polite"></p>
       </div>
     </div>
+
+    <div id="editor" class="hidden"></div>
 
     <div id="game" class="hidden"></div>
     <script type="module" src="/src/main.ts"></script>

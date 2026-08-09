@@ -1,11 +1,9 @@
+import { PLAYER_RADIUS } from "./constants";
 import {
-  ARENA_HEIGHT,
-  ARENA_WIDTH,
-  PLAYER_RADIUS,
-  SPAWN_POINTS,
-  WALLS,
+  DEFAULT_ARENA,
+  type ArenaDefinition,
   type Wall,
-} from "./constants";
+} from "./arena";
 
 export const circleHitsWall = (
   x: number,
@@ -23,34 +21,36 @@ export const circleHitsWall = (
 export const circleHitsAnyWall = (
   x: number,
   y: number,
-  radius: number
-): boolean => WALLS.some((wall) => circleHitsWall(x, y, radius, wall));
+  radius: number,
+  arena: ArenaDefinition = DEFAULT_ARENA
+): boolean => arena.walls.some((wall) => circleHitsWall(x, y, radius, wall));
 
 export const clampPlayerPosition = (
   currentX: number,
   currentY: number,
   desiredX: number,
-  desiredY: number
+  desiredY: number,
+  arena: ArenaDefinition = DEFAULT_ARENA
 ): { x: number; y: number } => {
   const nextX = Math.max(
     PLAYER_RADIUS,
-    Math.min(ARENA_WIDTH - PLAYER_RADIUS, desiredX)
+    Math.min(arena.width - PLAYER_RADIUS, desiredX)
   );
   const nextY = Math.max(
     PLAYER_RADIUS,
-    Math.min(ARENA_HEIGHT - PLAYER_RADIUS, desiredY)
+    Math.min(arena.height - PLAYER_RADIUS, desiredY)
   );
 
-  if (!circleHitsAnyWall(nextX, nextY, PLAYER_RADIUS)) {
+  if (!circleHitsAnyWall(nextX, nextY, PLAYER_RADIUS, arena)) {
     return { x: nextX, y: nextY };
   }
 
   // Slide along walls by resolving one axis at a time from the current pose.
-  if (!circleHitsAnyWall(nextX, currentY, PLAYER_RADIUS)) {
+  if (!circleHitsAnyWall(nextX, currentY, PLAYER_RADIUS, arena)) {
     return { x: nextX, y: currentY };
   }
 
-  if (!circleHitsAnyWall(currentX, nextY, PLAYER_RADIUS)) {
+  if (!circleHitsAnyWall(currentX, nextY, PLAYER_RADIUS, arena)) {
     return { x: currentX, y: nextY };
   }
 
@@ -75,15 +75,16 @@ export const circlesOverlap = (
 export const findRandomFreeSpawn = (
   occupied: Array<{ x: number; y: number; radius?: number }> = [],
   radius = PLAYER_RADIUS,
-  maxAttempts = 48
+  maxAttempts = 48,
+  arena: ArenaDefinition = DEFAULT_ARENA
 ): { x: number; y: number } => {
   const margin = radius + 2;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const x = margin + Math.random() * (ARENA_WIDTH - margin * 2);
-    const y = margin + Math.random() * (ARENA_HEIGHT - margin * 2);
+    const x = margin + Math.random() * (arena.width - margin * 2);
+    const y = margin + Math.random() * (arena.height - margin * 2);
 
-    if (circleHitsAnyWall(x, y, radius)) {
+    if (circleHitsAnyWall(x, y, radius, arena)) {
       continue;
     }
 
@@ -98,23 +99,25 @@ export const findRandomFreeSpawn = (
   }
 
   const fallback =
-    SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)] ??
-    SPAWN_POINTS[0];
+    arena.spawnPoints[Math.floor(Math.random() * arena.spawnPoints.length)] ??
+    arena.spawnPoints[0] ??
+    { x: arena.width / 2, y: arena.height / 2 };
   return { x: fallback.x, y: fallback.y };
 };
 
 export const bulletHitsWallOrBounds = (
   x: number,
   y: number,
-  radius: number
+  radius: number,
+  arena: ArenaDefinition = DEFAULT_ARENA
 ): boolean => {
   if (
     x < radius ||
     y < radius ||
-    x > ARENA_WIDTH - radius ||
-    y > ARENA_HEIGHT - radius
+    x > arena.width - radius ||
+    y > arena.height - radius
   ) {
     return true;
   }
-  return circleHitsAnyWall(x, y, radius);
+  return circleHitsAnyWall(x, y, radius, arena);
 };

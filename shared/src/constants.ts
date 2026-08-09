@@ -1,8 +1,12 @@
+import { DEFAULT_ARENA, type Wall } from "./arena";
+
+export type { Wall };
+
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
 
-export const ARENA_WIDTH = 960;
-export const ARENA_HEIGHT = 640;
+export const ARENA_WIDTH = DEFAULT_ARENA.width;
+export const ARENA_HEIGHT = DEFAULT_ARENA.height;
 
 export const PLAYER_RADIUS = 16;
 export const RESPAWN_MS = 2500;
@@ -21,28 +25,10 @@ export const PLAYER_COLORS = [
   0x84cc16,
 ] as const;
 
-export type Wall = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+/** Axis-aligned obstacles in the default arena (top-left origin). */
+export const WALLS: Wall[] = DEFAULT_ARENA.walls;
 
-/** Axis-aligned obstacles in arena space (top-left origin). */
-export const WALLS: Wall[] = [
-  { x: 280, y: 180, width: 120, height: 28 },
-  { x: 560, y: 180, width: 120, height: 28 },
-  { x: 280, y: 432, width: 120, height: 28 },
-  { x: 560, y: 432, width: 120, height: 28 },
-  { x: 440, y: 280, width: 80, height: 80 },
-];
-
-export const SPAWN_POINTS = [
-  { x: 120, y: 120 },
-  { x: 840, y: 120 },
-  { x: 120, y: 520 },
-  { x: 840, y: 520 },
-] as const;
+export const SPAWN_POINTS = DEFAULT_ARENA.spawnPoints;
 
 export type PlayerInput = {
   up: boolean;

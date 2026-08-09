@@ -1,12 +1,10 @@
 import Phaser from "phaser";
 import {
-  ARENA_HEIGHT,
-  ARENA_WIDTH,
   getWeapon,
   MAX_PLAYERS,
   PLAYER_RADIUS,
   swingBladeAngle,
-  WALLS,
+  type ArenaDefinition,
   type GameState,
   type PlayerInput,
   type PlayerSnapshot,
@@ -45,6 +43,7 @@ const WEAPON_SFX: Record<
 
 export class GameScene extends Phaser.Scene {
   private room!: PeerRoom;
+  private arena!: ArenaDefinition;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     up: Phaser.Input.Keyboard.Key;
@@ -81,7 +80,9 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.room = this.registry.get("room") as PeerRoom;
+    this.arena = this.room.arena;
     this.cameras.main.setBackgroundColor("#0b1220");
+    this.cameras.main.setBounds(0, 0, this.arena.width, this.arena.height);
     this.drawArena();
     this.startMusic();
 
@@ -137,7 +138,7 @@ export class GameScene extends Phaser.Scene {
       .setShadow(0, 1, "#020617", 2, true, true);
 
     this.hudScores = this.add
-      .text(ARENA_WIDTH - 14, 10, "", {
+      .text(this.arena.width - 14, 10, "", {
         ...hudStyle,
         fontSize: "12px",
         align: "right",
@@ -151,8 +152,8 @@ export class GameScene extends Phaser.Scene {
 
     this.add
       .text(
-        ARENA_WIDTH / 2,
-        ARENA_HEIGHT - 18,
+        this.arena.width / 2,
+        this.arena.height - 18,
         "WASD move · Mouse aim · Click shoot · R reload · M mute · Esc leave",
         {
           fontFamily: "Segoe UI, Trebuchet MS, sans-serif",
@@ -264,8 +265,8 @@ export class GameScene extends Phaser.Scene {
 
     const pointer = this.input.activePointer;
     const me = this.latestState?.players.find((player) => player.id === this.room.playerId);
-    const originX = me?.x ?? ARENA_WIDTH / 2;
-    const originY = me?.y ?? ARENA_HEIGHT / 2;
+    const originX = me?.x ?? this.arena.width / 2;
+    const originY = me?.y ?? this.arena.height / 2;
     const aimAngle = Math.atan2(pointer.worldY - originY, pointer.worldX - originX);
 
     const input: PlayerInput = {
@@ -292,27 +293,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawArena() {
+    const { width, height, walls } = this.arena;
     const floor = this.add.graphics();
     floor.fillStyle(0x111827, 1);
-    floor.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
+    floor.fillRect(0, 0, width, height);
     floor.lineStyle(2, 0x334155, 1);
-    floor.strokeRect(1, 1, ARENA_WIDTH - 2, ARENA_HEIGHT - 2);
+    floor.strokeRect(1, 1, width - 2, height - 2);
 
-    for (let x = 0; x < ARENA_WIDTH; x += 40) {
+    for (let x = 0; x < width; x += 40) {
       floor.lineStyle(1, 0x1f2937, 0.7);
-      floor.lineBetween(x, 0, x, ARENA_HEIGHT);
+      floor.lineBetween(x, 0, x, height);
     }
-    for (let y = 0; y < ARENA_HEIGHT; y += 40) {
+    for (let y = 0; y < height; y += 40) {
       floor.lineStyle(1, 0x1f2937, 0.7);
-      floor.lineBetween(0, y, ARENA_WIDTH, y);
+      floor.lineBetween(0, y, width, y);
     }
 
-    const walls = this.add.graphics();
-    walls.fillStyle(0x475569, 1);
-    for (const wall of WALLS) {
-      walls.fillRect(wall.x, wall.y, wall.width, wall.height);
-      walls.lineStyle(2, 0x94a3b8, 1);
-      walls.strokeRect(wall.x, wall.y, wall.width, wall.height);
+    const wallGfx = this.add.graphics();
+    wallGfx.fillStyle(0x475569, 1);
+    for (const wall of walls) {
+      wallGfx.fillRect(wall.x, wall.y, wall.width, wall.height);
+      wallGfx.lineStyle(2, 0x94a3b8, 1);
+      wallGfx.strokeRect(wall.x, wall.y, wall.width, wall.height);
     }
   }
 

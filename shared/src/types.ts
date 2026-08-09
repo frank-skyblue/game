@@ -1,3 +1,4 @@
+import type { ArenaDefinition } from "./arena";
 import type { PlayerInput } from "./constants";
 import type { WeaponId } from "./weapons";
 
@@ -44,7 +45,12 @@ export type GameState = {
 
 export type NetMessage =
   | { type: "join"; name: string; weapon: WeaponId }
-  | { type: "join_ok"; playerId: string; state: GameState }
+  | {
+      type: "join_ok";
+      playerId: string;
+      state: GameState;
+      arena: ArenaDefinition;
+    }
   | { type: "join_reject"; reason: string }
   | { type: "input"; input: PlayerInput }
   | { type: "state"; state: GameState };

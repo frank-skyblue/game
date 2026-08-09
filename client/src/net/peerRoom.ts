@@ -1,9 +1,12 @@
 import Peer, { type DataConnection } from "peerjs";
 import {
   ArenaSim,
+  cloneArena,
+  DEFAULT_ARENA,
   EMPTY_INPUT,
   MAX_PLAYERS,
   TICK_MS,
+  type ArenaDefinition,
   type GameState,
   type NetMessage,
   type PlayerInput,
@@ -17,6 +20,7 @@ export type PeerRoom = {
   roomCode: string;
   playerId: string;
   isHost: boolean;
+  arena: ArenaDefinition;
   getState: () => GameState;
   sendInput: (input: PlayerInput) => void;
   onState: (handler: (state: GameState) => void) => void;
@@ -52,11 +56,13 @@ export const createHostRoom = async (
   roomCode: string,
   name: string,
   weapon: WeaponId,
-  botCount = 0
+  botCount = 0,
+  arena: ArenaDefinition = DEFAULT_ARENA
 ): Promise<PeerRoom> => {
   const code = roomCode.toUpperCase();
   const peer = await openPeer(peerIdForRoom(code));
-  const sim = new ArenaSim(code);
+  const arenaCopy = cloneArena(arena);
+  const sim = new ArenaSim(code, arenaCopy);
   const hostId = peer.id;
   sim.addPlayer(hostId, name, weapon);
 
@@ -102,6 +108,7 @@ export const createHostRoom = async (
           type: "join_ok",
           playerId: conn.peer,
           state: sim.getState(),
+          arena: arenaCopy,
         });
         broadcastState();
         return;
@@ -143,6 +150,7 @@ export const createHostRoom = async (
     roomCode: code,
     playerId: hostId,
     isHost: true,
+    arena: arenaCopy,
     getState: () => sim.getState(),
     sendInput: (input) => {
       sim.setInput(hostId, input);
@@ -173,6 +181,7 @@ export const joinGuestRoom = async (
     bullets: [],
     serverTime: 0,
   };
+  let arena: ArenaDefinition = cloneArena(DEFAULT_ARENA);
   let playerId = peer.id;
   let stateHandler: ((next: GameState) => void) | null = null;
   let closeHandler: (() => void) | null = null;
@@ -201,6 +210,7 @@ export const joinGuestRoom = async (
         if (message.type === "join_ok") {
           playerId = message.playerId;
           state = message.state;
+          arena = cloneArena(message.arena ?? DEFAULT_ARENA);
           conn.off("data", onData);
           window.clearTimeout(timeout);
           resolve();
@@ -259,6 +269,7 @@ export const joinGuestRoom = async (
     roomCode: code,
     playerId,
     isHost: false,
+    arena,
     getState: () => state,
     sendInput: (input) => {
       latestInput = input;

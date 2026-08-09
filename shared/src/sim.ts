@@ -3,7 +3,6 @@ import {
   PLAYER_COLORS,
   PLAYER_RADIUS,
   RESPAWN_MS,
-  SPAWN_POINTS,
   type PlayerInput,
 } from "./constants";
 import {
@@ -12,6 +11,7 @@ import {
   clampPlayerPosition,
   findRandomFreeSpawn,
 } from "./collision";
+import { cloneArena, DEFAULT_ARENA, type ArenaDefinition } from "./arena";
 import { computeBotInput } from "./bots";
 import type { BulletSnapshot, GameState, PlayerSnapshot } from "./types";
 import {
@@ -45,6 +45,7 @@ const angleDelta = (a: number, b: number): number => {
 
 export class ArenaSim {
   roomCode: string;
+  readonly arena: ArenaDefinition;
   private players = new Map<string, PlayerSnapshot>();
   private inputs = new Map<string, PlayerInput>();
   private botIds = new Set<string>();
@@ -57,8 +58,9 @@ export class ArenaSim {
   private colorIndex = 0;
   private serverTime = 0;
 
-  constructor(roomCode: string) {
+  constructor(roomCode: string, arena: ArenaDefinition = DEFAULT_ARENA) {
     this.roomCode = roomCode;
+    this.arena = cloneArena(arena);
   }
 
   getPlayerCount(): number {
@@ -71,9 +73,11 @@ export class ArenaSim {
     weaponId?: WeaponId | string,
     options?: { freeSpawn?: boolean }
   ): PlayerSnapshot {
+    const spawns = this.arena.spawnPoints;
     const spawn = options?.freeSpawn
-      ? findRandomFreeSpawn([...this.players.values()])
-      : (SPAWN_POINTS[this.players.size % SPAWN_POINTS.length] ?? SPAWN_POINTS[0]);
+      ? findRandomFreeSpawn([...this.players.values()], PLAYER_RADIUS, 48, this.arena)
+      : (spawns[this.players.size % spawns.length] ??
+        spawns[0] ?? { x: this.arena.width / 2, y: this.arena.height / 2 });
     const weapon = getWeapon(parseWeaponId(weaponId));
     const player: PlayerSnapshot = {
       id,
@@ -206,7 +210,8 @@ export class ArenaSim {
         player.x,
         player.y,
         player.x + vx * dt,
-        player.y + vy * dt
+        player.y + vy * dt,
+        this.arena
       );
       player.x = next.x;
       player.y = next.y;
@@ -358,7 +363,7 @@ export class ArenaSim {
 
       if (
         now >= bullet.expiresAt ||
-        bulletHitsWallOrBounds(bullet.x, bullet.y, bullet.radius)
+        bulletHitsWallOrBounds(bullet.x, bullet.y, bullet.radius, this.arena)
       ) {
         continue;
       }
@@ -418,10 +423,11 @@ export class ArenaSim {
 
   private respawnPlayer(player: PlayerSnapshot) {
     const others = [...this.players.values()].filter((p) => p.id !== player.id);
+    const spawns = this.arena.spawnPoints;
     const spawn = this.botIds.has(player.id)
-      ? findRandomFreeSpawn(others)
-      : (SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)] ??
-        SPAWN_POINTS[0]);
+      ? findRandomFreeSpawn(others, PLAYER_RADIUS, 48, this.arena)
+      : (spawns[Math.floor(Math.random() * spawns.length)] ??
+        spawns[0] ?? { x: this.arena.width / 2, y: this.arena.height / 2 });
     player.x = spawn.x;
     player.y = spawn.y;
     player.health = getWeapon(player.weapon).maxHealth;
