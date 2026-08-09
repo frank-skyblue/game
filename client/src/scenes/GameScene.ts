@@ -941,8 +941,9 @@ export class GameScene extends Phaser.Scene {
     const isSword = weapon.melee;
     const alive = player.alive;
     const stealthed = Boolean(player.stealthed && alive);
-    // Local player sees themselves clearer while stealthed; others are faint.
-    const stealthAlpha = stealthed ? (isLocal ? 0.45 : 0.18) : 1;
+    // Only the controller sees a stealthed player; everyone else sees nothing.
+    const hiddenFromOthers = stealthed && !isLocal;
+    const stealthAlpha = stealthed ? (isLocal ? 0.45 : 0) : 1;
 
     view.aura.setPosition(player.x, player.y);
     view.core.setPosition(player.x, player.y);
@@ -959,19 +960,22 @@ export class GameScene extends Phaser.Scene {
     );
     view.aura.setAlpha(stealthAlpha);
     view.wispOrbit.setAlpha(stealthAlpha);
+    view.aura.setVisible(!hiddenFromOthers);
+    view.core.setVisible(!hiddenFromOthers);
+    view.wispOrbit.setVisible(!hiddenFromOthers);
 
     for (const wisp of view.wisps) {
       wisp.setFillStyle(lighten(player.color, 90), (alive ? 0.9 : 0.15) * stealthAlpha);
-      wisp.setVisible(alive);
+      wisp.setVisible(alive && !hiddenFromOthers);
     }
 
-    view.aim.setVisible(!isSword && alive);
+    view.aim.setVisible(!isSword && alive && !hiddenFromOthers);
     view.aim.setPosition(player.x, player.y);
     view.aim.setRotation(player.aimAngle);
     view.aim.setFillStyle(lighten(player.color, 40), stealthAlpha);
     view.aim.setAlpha(stealthAlpha);
 
-    view.blade.setVisible(isSword && alive);
+    view.blade.setVisible(isSword && alive && !hiddenFromOthers);
     view.blade.setPosition(player.x, player.y);
     if (isSword) {
       view.blade.setSize(weapon.meleeRange, 5);
@@ -980,16 +984,17 @@ export class GameScene extends Phaser.Scene {
 
     view.label.setPosition(player.x, player.y - AURA_RADIUS - 10);
     view.label.setText(player.name);
+    view.label.setVisible(!hiddenFromOthers);
     view.label.setAlpha(alive ? stealthAlpha : 0.4);
 
-    if (!isSword || !alive) {
+    if (!isSword || !alive || hiddenFromOthers) {
       view.swingTrail.clear();
       view.blade.setAlpha(0);
     }
 
-    if (!alive) {
+    if (!alive || hiddenFromOthers) {
       view.pulseTween?.pause();
-      view.aura.setScale(0.7);
+      view.aura.setScale(alive ? 1 : 0.7);
       view.motionEmitter.stop();
     } else if (view.pulseTween?.isPaused()) {
       view.pulseTween.resume();
@@ -1014,7 +1019,11 @@ export class GameScene extends Phaser.Scene {
       view.lastX = player.x;
       view.lastY = player.y;
 
-      if (player.alive) {
+      const hiddenFromOthers =
+        Boolean(player.stealthed && player.alive) &&
+        player.id !== this.room.playerId;
+
+      if (player.alive && !hiddenFromOthers) {
         const spin = 0.002 + speed * 0.08;
         view.wispOrbit.rotation += spin * delta;
         if (speed > 0.08) {
@@ -1022,6 +1031,8 @@ export class GameScene extends Phaser.Scene {
         } else {
           view.motionEmitter.stop();
         }
+      } else {
+        view.motionEmitter.stop();
       }
     }
   }
@@ -1041,8 +1052,12 @@ export class GameScene extends Phaser.Scene {
       }
 
       const weapon = getWeapon(player.weapon);
-      if (!weapon.melee || !player.alive) {
+      const hiddenFromOthers =
+        Boolean(player.stealthed && player.alive) &&
+        player.id !== this.room.playerId;
+      if (!weapon.melee || !player.alive || hiddenFromOthers) {
         view.swingTrail.clear();
+        view.blade.setVisible(false);
         continue;
       }
 
