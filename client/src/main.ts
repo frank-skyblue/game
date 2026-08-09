@@ -120,8 +120,6 @@ if (isEditorRoute()) {
       game.destroy(true);
     }
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
     game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: "game",
@@ -136,34 +134,17 @@ if (isEditorRoute()) {
       scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+        expandParent: true,
       },
       callbacks: {
         preBoot: (bootGame) => {
           bootGame.registry.set("room", room);
         },
         postBoot: (bootGame) => {
-          // Phaser 3.60+ removed GameConfig.resolution; boost the canvas
-          // backing store so FIT upscales stay sharp on high-DPI displays.
-          const applyHiDpi = () => {
-            if (dpr <= 1) {
-              return;
-            }
-            const canvas = bootGame.canvas;
-            const styleWidth = canvas.style.width;
-            const styleHeight = canvas.style.height;
-            const bufferW = Math.floor(bootGame.scale.gameSize.width * dpr);
-            const bufferH = Math.floor(bootGame.scale.gameSize.height * dpr);
-            if (canvas.width === bufferW && canvas.height === bufferH) {
-              return;
-            }
-            canvas.width = bufferW;
-            canvas.height = bufferH;
-            canvas.style.width = styleWidth;
-            canvas.style.height = styleHeight;
-            bootGame.renderer.resize(bufferW, bufferH);
-          };
-          applyHiDpi();
-          bootGame.scale.on("resize", applyHiDpi);
+          // Parent was just un-hidden; refresh once layout has a real size.
+          requestAnimationFrame(() => {
+            bootGame.scale.refresh();
+          });
         },
       },
     });
