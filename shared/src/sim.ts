@@ -1,9 +1,7 @@
 import {
   EMPTY_INPUT,
   PLAYER_COLORS,
-  PLAYER_MAX_HEALTH,
   PLAYER_RADIUS,
-  PLAYER_SPEED,
   RESPAWN_MS,
   SPAWN_POINTS,
   type PlayerInput,
@@ -83,7 +81,7 @@ export class ArenaSim {
       x: spawn.x,
       y: spawn.y,
       aimAngle: 0,
-      health: PLAYER_MAX_HEALTH,
+      health: weapon.maxHealth,
       weapon: weapon.id,
       ammo: weapon.infiniteAmmo ? 1 : weapon.magazineSize,
       reserveAmmo: weapon.infiniteAmmo ? 0 : weapon.reserveAmmo,
@@ -202,8 +200,8 @@ export class ArenaSim {
 
     if (vx !== 0 || vy !== 0) {
       const len = Math.hypot(vx, vy);
-      vx = (vx / len) * PLAYER_SPEED;
-      vy = (vy / len) * PLAYER_SPEED;
+      vx = (vx / len) * weapon.moveSpeed;
+      vy = (vy / len) * weapon.moveSpeed;
       const next = clampPlayerPosition(
         player.x,
         player.y,
@@ -426,7 +424,7 @@ export class ArenaSim {
         SPAWN_POINTS[0]);
     player.x = spawn.x;
     player.y = spawn.y;
-    player.health = PLAYER_MAX_HEALTH;
+    player.health = getWeapon(player.weapon).maxHealth;
     fillAmmo(player);
     player.swingStartedAt = 0;
     player.alive = true;

@@ -14,6 +14,10 @@ export type WeaponDef = {
   bulletLifetimeMs: number;
   bulletRadius: number;
   infiniteAmmo: boolean;
+  /** Player movement speed while this weapon is equipped. */
+  moveSpeed: number;
+  /** Max health while this weapon is equipped. */
+  maxHealth: number;
   /** Melee weapons use a swing arc instead of projectiles. */
   melee: boolean;
   swingMs: number;
@@ -36,6 +40,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     bulletLifetimeMs: 1500,
     bulletRadius: 5,
     infiniteAmmo: false,
+    moveSpeed: 220,
+    maxHealth: 100,
     melee: false,
     swingMs: 0,
     swingArc: 0,
@@ -53,6 +59,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     bulletLifetimeMs: 1100,
     bulletRadius: 4,
     infiniteAmmo: false,
+    moveSpeed: 280,
+    maxHealth: 115,
     melee: false,
     swingMs: 0,
     swingArc: 0,
@@ -70,6 +78,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     bulletLifetimeMs: 2000,
     bulletRadius: 5,
     infiniteAmmo: false,
+    moveSpeed: 150,
+    maxHealth: 75,
     melee: false,
     swingMs: 0,
     swingArc: 0,
@@ -87,6 +97,8 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     bulletLifetimeMs: 0,
     bulletRadius: 0,
     infiniteAmmo: true,
+    moveSpeed: 310,
+    maxHealth: 140,
     melee: true,
     swingMs: 140,
     swingArc: Math.PI * 0.75,

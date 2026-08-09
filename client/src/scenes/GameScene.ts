@@ -4,7 +4,6 @@ import {
   ARENA_WIDTH,
   getWeapon,
   MAX_PLAYERS,
-  PLAYER_MAX_HEALTH,
   PLAYER_RADIUS,
   swingBladeAngle,
   WALLS,
@@ -582,11 +581,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (me.alive) {
-      this.hudHealth?.setText(`HP ${Math.max(0, me.health)}/${PLAYER_MAX_HEALTH}`);
+      const weapon = getWeapon(me.weapon);
+      this.hudHealth?.setText(`HP ${Math.max(0, me.health)}/${weapon.maxHealth}`);
       this.hudHealth?.setColor("#86efac");
 
       const reloading = me.reloadEndsAt > 0 && state.serverTime < me.reloadEndsAt;
-      const weapon = getWeapon(me.weapon);
       if (weapon.infiniteAmmo) {
         this.hudAmmo?.setText(`${weapon.name}  ·  ∞`);
         this.hudAmmo?.setColor("#93c5fd");

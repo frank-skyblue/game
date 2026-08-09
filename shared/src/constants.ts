@@ -5,8 +5,6 @@ export const ARENA_WIDTH = 960;
 export const ARENA_HEIGHT = 640;
 
 export const PLAYER_RADIUS = 16;
-export const PLAYER_SPEED = 220;
-export const PLAYER_MAX_HEALTH = 100;
 export const RESPAWN_MS = 2500;
 
 export const MAX_PLAYERS = 8;
