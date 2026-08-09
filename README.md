@@ -30,7 +30,11 @@ Open http://localhost:5173 in two windows. Create a room in one, join with the c
 
 1. Push this repo to GitHub.
 2. Import the project in [Vercel](https://vercel.com).
-3. Framework preset: Other (uses root `vercel.json`).
+3. In Project Settings → General:
+   - **Root Directory:** `client`
+   - **Build Command:** `npm run build` (default from `client/vercel.json`)
+   - **Output Directory:** `dist`
+   - **Install Command:** `cd .. && npm install`
 4. Deploy. Share the URL with friends.
 
 Or with the CLI:
