@@ -24,6 +24,8 @@ Open http://localhost:5173 in two windows. Create a room in one, join with the c
 - **WASD** / arrows — move
 - **Mouse** — aim
 - **Click** — shoot
+- **R** — reload
+- **M** — mute / unmute sound
 - **Esc** — leave
 
 ## Deploy to Vercel (free)
@@ -52,3 +54,5 @@ No environment variables required. PeerJS uses the public PeerJS cloud broker fo
 - The player who clicks **Create room** is the host and runs the game simulation.
 - If the host closes their tab, the room ends.
 - Max 4 players per room.
+- Arena music: [Cyberpunk Moonlight Sonata](https://opengameart.org/content/cyberpunk-moonlight-sonata) by Joth (CC0).
+- Weapon SFX derived from [Gunshots](https://opengameart.org/content/gunshots) and [Swishes Sound Pack](https://opengameart.org/content/swishes-sound-pack) (CC0).

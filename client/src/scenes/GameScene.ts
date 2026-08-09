@@ -11,6 +11,7 @@ import {
   type GameState,
   type PlayerInput,
   type PlayerSnapshot,
+  type WeaponId,
 } from "@pvp-arena/shared";
 import type { PeerRoom } from "../net/peerRoom";
 
@@ -29,6 +30,20 @@ type SwingAnim = {
   color: number;
 };
 
+const MUSIC_KEY = "arena-bgm";
+const MUSIC_MUTE_STORAGE_KEY = "pvp-arena-music-muted";
+const MUSIC_VOLUME = 0.32;
+
+const WEAPON_SFX: Record<
+  WeaponId,
+  { key: string; path: string; volume: number }
+> = {
+  smg: { key: "sfx-smg", path: "/assets/sfx/smg.wav", volume: 0.28 },
+  rifle: { key: "sfx-rifle", path: "/assets/sfx/rifle.wav", volume: 0.42 },
+  sniper: { key: "sfx-sniper", path: "/assets/sfx/sniper.wav", volume: 0.55 },
+  sword: { key: "sfx-sword", path: "/assets/sfx/sword.wav", volume: 0.48 },
+};
+
 export class GameScene extends Phaser.Scene {
   private room!: PeerRoom;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -39,6 +54,8 @@ export class GameScene extends Phaser.Scene {
     right: Phaser.Input.Keyboard.Key;
   };
   private reloadKey!: Phaser.Input.Keyboard.Key;
+  private muteKey!: Phaser.Input.Keyboard.Key;
+  private music?: Phaser.Sound.BaseSound;
   private playerViews = new Map<string, PlayerView>();
   private swingAnims = new Map<string, SwingAnim>();
   private bulletViews = new Map<string, Phaser.GameObjects.Arc>();
@@ -46,17 +63,28 @@ export class GameScene extends Phaser.Scene {
   private hudHealth?: Phaser.GameObjects.Text;
   private hudAmmo?: Phaser.GameObjects.Text;
   private hudScores?: Phaser.GameObjects.Text;
+  private hudMusic?: Phaser.GameObjects.Text;
   private shooting = false;
   private latestState: GameState | null = null;
+  /** Skip SFX on the first state sync so mid-match joins do not blare. */
+  private sfxPrimed = false;
 
   constructor() {
     super("game");
+  }
+
+  preload() {
+    this.load.audio(MUSIC_KEY, "/assets/music/cyberpunk-moonlight-sonata.mp3");
+    for (const sfx of Object.values(WEAPON_SFX)) {
+      this.load.audio(sfx.key, sfx.path);
+    }
   }
 
   create() {
     this.room = this.registry.get("room") as PeerRoom;
     this.cameras.main.setBackgroundColor("#0b1220");
     this.drawArena();
+    this.startMusic();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = this.input.keyboard!.addKeys({
@@ -66,6 +94,7 @@ export class GameScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D,
     }) as typeof this.wasd;
     this.reloadKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.muteKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.M);
 
     this.input.on("pointerdown", () => {
       this.shooting = true;
@@ -101,6 +130,13 @@ export class GameScene extends Phaser.Scene {
       .setStroke("#020617", 3)
       .setShadow(0, 1, "#020617", 2, true, true);
 
+    this.hudMusic = this.add
+      .text(14, 64, "", { ...hudStyle, color: "#94a3b8", fontSize: "12px" })
+      .setScrollFactor(0)
+      .setDepth(10)
+      .setStroke("#020617", 3)
+      .setShadow(0, 1, "#020617", 2, true, true);
+
     this.hudScores = this.add
       .text(ARENA_WIDTH - 14, 10, "", {
         ...hudStyle,
@@ -118,7 +154,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         ARENA_WIDTH / 2,
         ARENA_HEIGHT - 18,
-        "WASD move · Mouse aim · Click shoot · R reload · Esc leave",
+        "WASD move · Mouse aim · Click shoot · R reload · M mute · Esc leave",
         {
           fontFamily: "Segoe UI, Trebuchet MS, sans-serif",
           fontSize: "11px",
@@ -135,6 +171,12 @@ export class GameScene extends Phaser.Scene {
       this.room.destroy();
     });
 
+    this.muteKey.on("down", () => {
+      this.toggleMusicMute();
+    });
+
+    this.updateMusicHud();
+
     this.room.onState((state) => {
       this.latestState = state;
       this.syncFromState(state);
@@ -146,6 +188,74 @@ export class GameScene extends Phaser.Scene {
 
     this.latestState = this.room.getState();
     this.syncFromState(this.latestState);
+  }
+
+  private startMusic() {
+    if (!this.cache.audio.exists(MUSIC_KEY)) {
+      return;
+    }
+
+    this.music = this.sound.add(MUSIC_KEY, {
+      loop: true,
+      volume: MUSIC_VOLUME,
+    });
+
+    const muted = this.readMusicMuted();
+    this.sound.mute = muted;
+
+    const play = () => {
+      if (!this.music?.isPlaying) {
+        this.music?.play();
+      }
+    };
+
+    if (this.sound.locked) {
+      this.sound.once(Phaser.Sound.Events.UNLOCKED, play);
+    } else {
+      play();
+    }
+  }
+
+  private toggleMusicMute() {
+    this.sound.mute = !this.sound.mute;
+    this.writeMusicMuted(this.sound.mute);
+    this.updateMusicHud();
+  }
+
+  private updateMusicHud() {
+    this.hudMusic?.setText(this.sound.mute ? "Sound muted (M)" : "Sound on (M)");
+  }
+
+  private readMusicMuted(): boolean {
+    try {
+      return window.localStorage.getItem(MUSIC_MUTE_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  private writeMusicMuted(muted: boolean) {
+    try {
+      window.localStorage.setItem(MUSIC_MUTE_STORAGE_KEY, muted ? "1" : "0");
+    } catch {
+      // Ignore quota / private-mode failures.
+    }
+  }
+
+  private playWeaponSfx(weaponId: WeaponId | string | undefined, ownerId: string) {
+    if (!this.sfxPrimed || this.sound.mute) {
+      return;
+    }
+
+    const weapon = getWeapon(weaponId);
+    const sfx = WEAPON_SFX[weapon.id];
+    if (!this.cache.audio.exists(sfx.key)) {
+      return;
+    }
+
+    const isLocal = ownerId === this.room.playerId;
+    const volume = sfx.volume * (isLocal ? 1 : 0.7);
+    this.sound.play(sfx.key, { volume, rate: isLocal ? 1 : 0.98 });
   }
 
   update(_time: number, _delta: number) {
@@ -237,6 +347,9 @@ export class GameScene extends Phaser.Scene {
         view = this.add.circle(bullet.x, bullet.y, bullet.radius, bullet.color, 1);
         view.setDepth(5);
         this.bulletViews.set(bullet.id, view);
+
+        const owner = state.players.find((player) => player.id === bullet.ownerId);
+        this.playWeaponSfx(owner?.weapon ?? "rifle", bullet.ownerId);
       }
       view.setPosition(bullet.x, bullet.y);
       view.setRadius(bullet.radius);
@@ -251,6 +364,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateHud(state);
+    this.sfxPrimed = true;
   }
 
   private syncSwingAnim(player: PlayerSnapshot) {
@@ -277,6 +391,7 @@ export class GameScene extends Phaser.Scene {
       aimAngle: player.swingAimAngle,
       color: player.color,
     });
+    this.playWeaponSfx("sword", player.id);
   }
 
   private upsertPlayer(player: PlayerSnapshot) {
